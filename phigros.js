@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * phigros.js -- by Kaka
+ * 
+ * --- **NOT** fully compatible with Safari! ---
+ * 
+ * Web Audio API and Canvas API is not fully compatible with Safari.
+ * Other Chromium-based WebKit browsers are recommended.
+ * 
+ * If your are using iOS / iPadOS, you have bad luck here. :(
+ * 
+ ******************************************************************************/
+const $_PhigrosJS = {
+    author: "Kaka",
+    source: "https://github.com/Kaka/phigros.js"
+};
+
 var Assets = {
     preferredFont: `Saira, Exo, "Noto Sans CJK TC", sans-serif`,
     loadImageAsset(name, source) {
@@ -1714,12 +1730,12 @@ class Phigros extends GameBase {
         // -- Pause button
         ctx.fillStyle = "#000";
         ctx.globalAlpha = 0.5;
-        ctx.fillRect(30 * ratio + pad, 30 * ratio, 8 * ratio, 29 * ratio);
-        ctx.fillRect(46 * ratio + pad, 30 * ratio, 8 * ratio, 29 * ratio);
+        ctx.fillRect(30 * ratio + pad, 30 * ratio, 10 * ratio, 29 * ratio);
+        ctx.fillRect(48 * ratio + pad, 30 * ratio, 10 * ratio, 29 * ratio);
         ctx.fillStyle = "#fff";
         ctx.globalAlpha = 1;
-        ctx.fillRect(26 * ratio + pad, 26 * ratio, 8 * ratio, 29 * ratio);
-        ctx.fillRect(42 * ratio + pad, 26 * ratio, 8 * ratio, 29 * ratio);
+        ctx.fillRect(26 * ratio + pad, 26 * ratio, 10 * ratio, 29 * ratio);
+        ctx.fillRect(44 * ratio + pad, 26 * ratio, 10 * ratio, 29 * ratio);
 
         // -- Song title
         ctx.fillStyle = "#fff";
