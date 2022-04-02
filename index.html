@@ -1,0 +1,284 @@
+<html lang="zh-TW">
+    <head>
+        <meta charset="utf-8" />
+        <title>Phigros 譜面模擬器</title>
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="style.css" />
+        <link href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=0.8, viewport-fit=cover" />
+    </head>
+    <body>
+        <nav class="navbar navbar-nav navbar-expand-lg navbar-dark bg-dark">
+            <div class="container pl-3">
+                <span class="navbar-brand">Phigros 譜面模擬器</span>
+            </div>
+        </nav>
+        <div class="container pt-3">
+            <canvas id="main" class="" width="2048" height="1080"></canvas>
+            <div class="accordion my-3">
+                <div class="card">
+                    <!-- Collapse toggle area -->
+                    <div class="card-header">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#basic-config">基本設定</button>
+                        </h2>
+                    </div>
+
+                    <!-- Collapsed area -->
+                    <div class="collapse show" id="basic-config">
+                        <div class="p-3">
+                            <audio id="game-audio" controls>
+                                <source src="./assets/audio/bgm085.mp3" autoplay loop/>
+                            </audio>
+                            <div class="container mt-3 row">
+                                <div class="col-lg">
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text" id="basic-addon1">播放速度</span>
+                                        </div>
+                                        <div class="btn-group" role="group" aria-label="Basic example">
+                                            <button type="button" class="btn btn-secondary" onclick="switchSpeed(this)">0.5x</button>
+                                            <button type="button" class="btn btn-secondary" onclick="switchSpeed(this)">0.75x</button>
+                                            <button type="button" class="btn btn-secondary" onclick="switchSpeed(this)">1x</button>
+                                            <button type="button" class="btn btn-secondary" onclick="switchSpeed(this)">1.25x</button>
+                                            <button type="button" class="btn btn-secondary" onclick="switchSpeed(this)">1.5x</button>
+                                            <button type="button" class="btn btn-secondary" onclick="switchSpeed(this)">2x</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" onclick="setupDebugger(this)" id="enable-debugger">啟用進階選項</button>
+                                    <button type="button" class="btn btn-secondary" onclick="location.href = location.href">Refresh</button>
+                                    <button type="button" class="btn btn-text" onclick="location.href = 'phigros.js'">phigros.js</button>
+                                </div>
+                                <div class="col-lg">
+                                    <button type="button" class="btn btn-primary" onclick="fullScreen()">全螢幕並播放</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-header">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#pg_id-table">Phigros 譜面</button>
+                        </h2>
+                    </div>
+                    <div class="collapse show" id="pg_id-table">
+                        <div class="p-3">
+                            
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="label-chart">譜面</span>
+                                </div>
+                                <input type="file" class="form-control" id="input-chart" />
+                            </div>
+                            
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="label-audio">音檔</span>
+                                </div>
+                                <input type="file" class="form-control" id="input-audio" />
+                            </div>
+
+                            <button class="mb-3 btn btn-primary" onclick="loadChart()">載入</button>
+                            <button class="mb-3 btn btn-secondary" onclick="loadTables()">重新整理</button>
+                            <table class="table" id="pg-map-table">
+                                <tr>
+                                    <th scope="col">#</th><th scope="col">歌名</th><th scope="col"> </th>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="dat.gui.min.js"></script>
+    <script src="utils.js"></script>
+    <script src="phigros.js?dd"></script>
+
+    <!-- Chart plugins -->
+    <script src="./plugins/bestdori.js"></script>
+    <script src="./plugins/arcaea.js"></script>
+
+    <script>
+        function hasQuery(key) {
+            return location.search.indexOf("?"+key) != -1 || location.search.indexOf("&"+key) != -1;
+        }
+
+        /** @type {HTMLCanvasElement} */
+        var canvas = document.getElementById("main");
+
+        // Launch our game.
+        var game = new Phigros(canvas, {
+            audioCompatMode: hasQuery("audioCompat")
+        });
+
+        game.loadChartWithAudio("./assets/charts/sigma_apf/4.json", "./assets/charts/sigma_apf/base.wav");
+        game.songName = "Sigma (Haocore Mix) ~ Regrets of The Yellow Tulip ~";
+        game.diffName = "SP";
+        game.diffLevel = -1;
+        game.background = (() => {
+            var im = new Image();
+            im.src = "./assets/charts/sigma_apf/bg.png";
+            return im;
+        })();
+
+        var handler = e => {
+            e.preventDefault();
+            if(game.audioContext.state == "suspended") {
+                game.audioContext.resume();
+            }
+        };
+
+        canvas.addEventListener("touchstart", handler);
+        canvas.addEventListener("click", handler);
+
+        function setupDebugger(btn) {
+            // game.renderDebug = true;
+            var s = document.createElement("script");
+            s.src = "debugger.js";
+            document.body.append(s);
+
+            if(btn) {
+                btn.disabled = true;
+            }
+        }
+
+        if(hasQuery("dev")) {
+            setupDebugger(document.getElementById("enable-debugger"));
+        }
+
+        if(hasQuery("dummy")) {
+            game.enableDummyNotes = true;
+        }
+
+        function switchSpeed(btn) {
+            var speedText = btn.innerText;
+            var speed = parseFloat(speedText.substring(0, speedText.length - 1));
+            game.setPlaybackRate(speed);
+        }
+
+        function refreshSwitch() {
+        }
+
+        function fullScreen() {
+            var canvas = document.getElementById("main");
+
+            var createMatch = s => regex => regex.test(s);
+            var m = createMatch(navigator.userAgent);
+            if(m(/iPhone/i) || m(/iPad/i) || m(/iPod/i) || (m(/Macintosh/i) && m(/Safari/i) && !m(/Chrome/i))) {
+                canvas.classList.add("fullscreen");
+                setTimeout(() => {
+                    game.audioElem.play();
+                }, 1000);
+            } else {
+                canvas.requestFullscreen();
+                setTimeout(() => {
+                    game.audioElem.play();
+                }, 5000);
+            }
+        }
+
+        function loadPgByButton(btn) {
+
+        }
+
+        function loadChart() {
+            var audioInput = document.getElementById("input-audio");
+            var chartInput = document.getElementById("input-chart");
+
+            game.loadChartWithAudio(URL.createObjectURL(chartInput.files.item(0)), URL.createObjectURL(audioInput.files.item(0)));
+        }
+
+        function loadTables() {
+            var c2Table = document.getElementById("pg-map-table");
+
+            var t = `<tr>
+                <th scope="col">#</th><th scope="col">歌名</th><th scope="col"> </th>
+            </tr>`;
+            c2Table.innerHTML = `<tr>
+                <th scope="col">歌名</th><th scope="col"> </th>
+            </tr>`;
+
+            fetch("./assets/charts/db.json", {
+                cache: "no-cache"
+            }).then(r => r.json())
+            .then(db => {
+                function create(name) {
+                    return document.createElement(name);
+                }
+
+                function createBadge(name, color) {
+                    var badge = create("span");
+                    badge.classList.add("badge", "align-middle", "mr-1");
+                    badge.style.background = color || "#90a4ae";
+                    badge.style.color = "#fff";
+                    badge.innerText = name;
+                    return badge;
+                }
+
+                var diffColor = {
+                    easy: "#3d5afe",
+                    normal: "#43a047",
+                    hard: "#ffa000",
+                    expert: "#d50000",
+                    special: "#d500f9"
+                };
+                
+                db.forEach(item => {
+                    var row = create("tr");
+
+                    var titleCell = create("td");
+                    var titleContainer = create("div");
+                    titleCell.classList.add("align-middle");
+                    titleContainer.innerHTML = `<div class="spinner-grow" role="status"><span class="sr-only">載入中...</span></div>`;
+                    titleContainer.style.display = "inline-block";
+                    titleContainer.classList.add("mr-4", "align-middle");
+                    titleCell.appendChild(titleContainer);
+
+                    var loadCell = create("td");
+                    loadCell.innerHTML = `<button class="btn btn-link">載入</button>`;
+                    loadCell.children[0].addEventListener("click", e => {
+                        game.loadChartWithAudio(item.chart, item.audio);
+                        game.songName = item.name;
+                        game.diffName = Constants.difficulties[item.difficulty.type] || "SP";
+                        game.diffLevel = item.difficulty.level == -1 ? "??" : item.difficulty.level;
+                        game.background = item.bg ? (() => {
+                            var im = new Image();
+                            im.src = item.bg;
+                            return im;
+                        })() : null;
+                        document.body.scrollTo({
+                            top: 0
+                        });
+                    });
+
+                    row.appendChild(titleCell);
+                    row.appendChild(loadCell);
+
+                    var fillItem = (item) => {
+                        var html = `<span>${item.name}</span>`;
+                        function ra(s, a, b) {
+                            var r = s;
+                            while(r != r.replace(a, b)) {
+                                r = r.replace(a, b);
+                            }
+                            return r;
+                        }
+                        html = ra(html, "[FULL]", `<div style="background-color: transparent; background-image: url('./assets/full.png'); background-size: cover; background-blend-mode: multiply; display: inline-block; vertical-align: middle; width: 1.6em; height: 0.8em; margin-top: -0.2em;"></div>`);
+                        
+                        titleContainer.innerHTML = html + (item.legacy ? " (Legacy)" : "") + "&nbsp;&nbsp;&nbsp;";
+                        var diff = item.difficulty;
+                        titleContainer.appendChild(createBadge((Constants.difficulties[diff.type] || "SP") + " " + (diff.level == -1 ? "?" : diff.level), diff.color));
+                    };
+                    fillItem(item);
+
+                    c2Table.appendChild(row);
+                });
+            });
+        }
+        loadTables();
+    </script>
+</html>
