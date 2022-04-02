@@ -11,7 +11,7 @@
  ******************************************************************************/
 const $_PhigrosJS = {
     author: "Kaka",
-    source: "https://github.com/Kaka/phigros.js"
+    source: "https://github.com/Kaka/phigros-web"
 };
 
 var Assets = {
