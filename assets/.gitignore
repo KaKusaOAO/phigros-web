@@ -1,6 +1,7 @@
 !charts/
 charts/*
 !charts/db.json
+!charts/dbc.json
 
 !charts/rrhar
 !charts/rrhar/*

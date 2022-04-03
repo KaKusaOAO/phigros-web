@@ -202,7 +202,12 @@
                 <th scope="col">歌名</th><th scope="col"> </th>
             </tr>`;
 
-            fetch("./assets/charts/db.json", {
+            let path = "./assets/charts/db.json";
+            if (location.hostname.endsWith("github.io")) {
+                path = "./assets/charts/dbc.json";
+            }
+
+            fetch(path, {
                 cache: "no-cache"
             }).then(r => r.json())
             .then(db => {
