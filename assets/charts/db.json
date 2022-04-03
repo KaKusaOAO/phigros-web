@@ -10,6 +10,36 @@
         "bg": "./assets/charts/sigma_apf/bg.png"
     },
     {
+        "name": "Sigma (Haocore Mix) ~ 105秒の伝説 ~",
+        "difficulty": {
+            "type": 4,
+            "level": -1
+        },
+        "audio": "./assets/charts/sigma_105/base.wav",
+        "chart": "./assets/charts/sigma_105/4.json",
+        "bg": "./assets/charts/sigma_105/bg.png"
+    },
+    {
+        "name": "HAZARD",
+        "difficulty": {
+            "type": 4,
+            "level": -1
+        },
+        "audio": "./assets/charts/hazard/base.wav",
+        "chart": "./assets/charts/hazard/4.json",
+        "bg": "./assets/charts/hazard/bg.png"
+    },
+    {
+        "name": "HAZARD x Initialize",
+        "difficulty": {
+            "type": 4,
+            "level": -1
+        },
+        "audio": "./assets/charts/initialize/base.wav",
+        "chart": "./assets/charts/hazard/4.json",
+        "bg": "./assets/charts/hazard/bg.png"
+    },
+    {
         "name": "Rrhar'il",
         "difficulty": {
             "type": 3,
@@ -89,5 +119,15 @@
         "audio": "./assets/charts/jgbell/base.wav",
         "chart": "./assets/charts/jgbell/0.json",
         "bg": "./assets/charts/jgbell/bg.png"
+    },
+    {
+        "name": "望影の方舟Six",
+        "difficulty": {
+            "type": 2,
+            "level": 15
+        },
+        "audio": "./assets/charts/six/base.wav",
+        "chart": "./assets/charts/six/2err.json",
+        "bg": "./assets/charts/six/bg.png"
     }
 ]

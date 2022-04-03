@@ -244,7 +244,7 @@
                         game.loadChartWithAudio(item.chart, item.audio);
                         game.songName = item.name;
                         game.diffName = Constants.difficulties[item.difficulty.type] || "SP";
-                        game.diffLevel = item.difficulty.level == -1 ? "??" : item.difficulty.level;
+                        game.diffLevel = item.difficulty.level;
                         game.background = item.bg ? (() => {
                             var im = new Image();
                             im.src = item.bg;

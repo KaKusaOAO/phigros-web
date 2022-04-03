@@ -583,7 +583,7 @@ class HoldNote extends Note {
         
         if (this.hasSibling) {
             w *= 1060 / 989 * 1.025;
-            endH -= ratio * 1060 / 989 * 1.029;
+            endH -= Math.ceil(ratio * 1060 / 989 * 2.5 - 0.75) + 0.5;
         }
         ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH);
         ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos, w, headH);
@@ -850,34 +850,15 @@ class JudgeLine {
         ctx.translate(linePos.x, linePos.y);
         ctx.rotate(lineRot);
 
-        this.notesAbove.forEach(n => {
+        /**
+         * @param {Note} n 
+         */
+        let noteRenderFn = n => {
             n.update(game);
             if(n.isOffScreen(game) && !game.offScreenForceRender) return;
 
             var speed = this.getSpeed(time);
-            var doClip = speed < 0 || n.doesClipOnPositiveSpeed();
-            if(game.renderDebug) {
-                n._renderTouchArea(game);
-            }
-            if(doClip) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(-cw, -ch * 2, cw * 2, ch * 2);
-                ctx.clip();
-            }
-            n.render(game);
-            if(doClip) {
-                ctx.restore();
-            }
-        });
-
-        ctx.scale(1, -1);
-
-        this.notesBelow.forEach(n => {
-            n.update(game);
-            if(n.isOffScreen(game) && !game.offScreenForceRender) return;
-
-            var speed = this.getSpeed(time);
+            // var doClip = speed < 0 || n.doesClipOnPositiveSpeed();
             var doClip = (speed < 0 || n.doesClipOnPositiveSpeed()) && (!n.isOffScreen(game) || game.offScreenForceRender);
             if(game.renderDebug) {
                 n._renderTouchArea(game);
@@ -892,7 +873,15 @@ class JudgeLine {
             if(doClip) {
                 ctx.restore();
             }
-        });
+        };
+
+        this.notesAbove.filter(n => n instanceof HoldNote).forEach(noteRenderFn);
+        this.notesAbove.filter(n => !(n instanceof HoldNote)).forEach(noteRenderFn);
+
+        ctx.scale(1, -1);
+        
+        this.notesBelow.filter(n => n instanceof HoldNote).forEach(noteRenderFn);
+        this.notesBelow.filter(n => !(n instanceof HoldNote)).forEach(noteRenderFn);
 
         var lt = ctx.getTransform();
         ctx.setTransform(t);
@@ -1233,7 +1222,7 @@ class GameBase {
         this.refScreenWidth = 1440; // 1920;
         this.refScreenHeight = 1080;
 
-        this.setResolutionScale(1);
+        this.setResolutionScale(devicePixelRatio);
 
         /** @type {Chart} */
         this.chart = null;
@@ -1588,51 +1577,65 @@ class GameBase {
         ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
         if(this.background && this.background instanceof Image) {
-            var pad = this.getRenderXPad();
+            try {
+                var pad = this.getRenderXPad();
 
-            // Background of padding
-            ctx.globalAlpha = 0.4;
-            ctx.drawImage(this.background, 0, 0, ctx.canvas.width, ctx.canvas.height);
+                // Background of padding
+                ctx.globalAlpha = 0.4;
+                ctx.drawImage(this.background, 0, 0, ctx.canvas.width, ctx.canvas.height);
 
-            // Background of play area
-            ctx.globalAlpha = 1;
+                // Background of play area
+                ctx.globalAlpha = 1;
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(pad, 0, ctx.canvas.width - pad * 2, ctx.canvas.height);
-            ctx.clip();
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(pad, 0, ctx.canvas.width - pad * 2, ctx.canvas.height);
+                ctx.clip();
 
-            var iw = this.background.width;
-            var ih = this.background.height;
-            var xOffset = (ctx.canvas.width - pad * 2) - ctx.canvas.height / ih * iw;
+                var iw = this.background.width;
+                var ih = this.background.height;
+                var xOffset = (ctx.canvas.width - pad * 2) - ctx.canvas.height / ih * iw;
 
-            // Render blurred background
-            var osc = this.blurOffscreenCanvas;
-            if (!osc) {
-                osc = this.blurOffscreenCanvas = document.createElement("canvas");
-                this.blurOffscreenContext = osc.getContext("2d");
+                // Render blurred background
+                var osc = this.blurOffscreenCanvas;
+                if (!osc) {
+                    osc = this.blurOffscreenCanvas = document.createElement("canvas");
+                    this.blurOffscreenContext = osc.getContext("2d");
+                }
+                osc.width = ctx.canvas.width;
+                osc.height = ctx.canvas.height;
+
+                var oCtx = this.blurOffscreenContext;
+                var t = oCtx.getTransform();
+                oCtx.filter = `blur(${this.backgroundBlur * this.ratio}px)`;
+                oCtx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
+                oCtx.scale(1.125, 1.125);
+                oCtx.drawImage(this.background,
+                    pad + xOffset / 2 - ctx.canvas.width / 2, -ctx.canvas.height / 2,
+                    iw / ih * oCtx.canvas.height, oCtx.canvas.height);
+                oCtx.setTransform(t);
+                ctx.drawImage(osc, 0, 0, ctx.canvas.width, ctx.canvas.height);
+
+                // Dim
+                ctx.globalAlpha = this.backgroundDim;
+                ctx.fillRect(pad, 0, ctx.canvas.width - pad * 2, ctx.canvas.height);
+                ctx.restore();
+
+                // Reset alpha
+                ctx.globalAlpha = 1;
+            } catch (ex) {
+                ctx.fillStyle = "#000";
+                ctx.globalAlpha = 1;
+                ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+                ctx.fillStyle = "#fff";
+                ctx.globalAlpha = 0.25;
+                ctx.textBaseline = "middle";
+                ctx.textAlign = "center";
+                ctx.fillText("Invalid background!", ctx.canvas.width / 2, ctx.canvas.height / 2, ctx.canvas.width * 0.8);
+
+                ctx.globalAlpha = 1;
             }
-            osc.width = ctx.canvas.width;
-            osc.height = ctx.canvas.height;
-
-            var oCtx = this.blurOffscreenContext;
-            var t = oCtx.getTransform();
-            oCtx.filter = `blur(${this.backgroundBlur * this.ratio}px)`;
-            oCtx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
-            oCtx.scale(1.125, 1.125);
-            oCtx.drawImage(this.background,
-                pad + xOffset / 2 - ctx.canvas.width / 2, -ctx.canvas.height / 2,
-                iw / ih * oCtx.canvas.height, oCtx.canvas.height);
-            oCtx.setTransform(t);
-            ctx.drawImage(osc, 0, 0, ctx.canvas.width, ctx.canvas.height);
-
-            // Dim
-            ctx.globalAlpha = this.backgroundDim;
-            ctx.fillRect(pad, 0, ctx.canvas.width - pad * 2, ctx.canvas.height);
-            ctx.restore();
-
-            // Reset alpha
-            ctx.globalAlpha = 1;
         }
     }
 
@@ -1730,12 +1733,12 @@ class Phigros extends GameBase {
         // -- Pause button
         ctx.fillStyle = "#000";
         ctx.globalAlpha = 0.5;
-        ctx.fillRect(30 * ratio + pad, 30 * ratio, 10 * ratio, 29 * ratio);
-        ctx.fillRect(48 * ratio + pad, 30 * ratio, 10 * ratio, 29 * ratio);
+        ctx.fillRect(30 * ratio + pad, 32 * ratio, 9 * ratio, 29 * ratio);
+        ctx.fillRect(47 * ratio + pad, 32 * ratio, 9 * ratio, 29 * ratio);
         ctx.fillStyle = "#fff";
         ctx.globalAlpha = 1;
-        ctx.fillRect(26 * ratio + pad, 26 * ratio, 10 * ratio, 29 * ratio);
-        ctx.fillRect(44 * ratio + pad, 26 * ratio, 10 * ratio, 29 * ratio);
+        ctx.fillRect(26 * ratio + pad, 28 * ratio, 9 * ratio, 29 * ratio);
+        ctx.fillRect(43 * ratio + pad, 28 * ratio, 9 * ratio, 29 * ratio);
 
         // -- Song title
         ctx.fillStyle = "#fff";
