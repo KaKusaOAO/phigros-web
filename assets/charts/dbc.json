@@ -8,7 +8,7 @@
         "audio": "./assets/charts/sigma_apf/base.wav",
         "chart": "./assets/charts/sigma_apf/4.json",
         "bg": "./assets/charts/sigma_apf/bg.png"
-    }
+    },
     {
         "name": "Rrhar'il",
         "difficulty": {
