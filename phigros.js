@@ -237,7 +237,7 @@ class Note {
         ]);
         note.holdTime = this.holdTime || 0;
 
-        if(this.noteWidth != 210) {
+        if(this.noteWidth != 240) {
             note.noteWidth = this.noteWidth;
         }
 
