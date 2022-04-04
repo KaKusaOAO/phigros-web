@@ -206,7 +206,7 @@ class Note {
         // Custom state
         /** @type {JudgeLine} */
         this.parent = null;
-        this.noteWidth = 210;
+        this.noteWidth = 240;
         this.hasSibling = false;
     }
 
@@ -326,12 +326,12 @@ class Note {
     }
 
     getXPos(game) {
-        var xPos = 0.86 * this.positionX / 15;
+        var xPos = 0.845 * this.positionX / 15;
         var rp = this.parent.getRotatedPosition(game, { x: xPos, y: 0});
         var sp = this.parent.getScaledPosition(game, rp);
         sp.x -= game.getRenderXPad();
         sp.y -= game.canvas.height;
-        sp.y *= 1.6 * game.getNoteRatio() / game.ratio;
+        sp.y *= 1.8 * game.getNoteRatio() / game.ratio;
 
         var fp = this.parent.getRotatedPosition(game, sp, this.parent.getLineRotation(game.time));
         xPos = fp.x;
@@ -891,6 +891,14 @@ class JudgeLine {
             ctx.globalAlpha = this.getLineAlpha(time);
             ctx.fillStyle = "#fff";
 
+            if (game.renderDebug) {
+                ctx.globalAlpha *= 0.875;
+                ctx.globalAlpha += 0.125;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20 * game.ratio, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
             var thickness = 8 * game.getNoteRatio();
             ctx.fillRect(-cw * 2, thickness / -2, cw * 4, thickness);
 
@@ -920,7 +928,7 @@ class JudgeLine {
      */
     getYPosition(game, time) {
         var multiplier = 10 / game.refScreenHeight * game.canvas.height / Math.pow(this.bpm / 127, 1.5);
-        multiplier *= 1.1586;
+        multiplier *= 1.17;
 
         if(game.useUniqueSpeed) {
             return multiplier * time;
