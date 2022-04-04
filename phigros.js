@@ -356,7 +356,7 @@ class Note {
     }
 
     getDetectWidth() {
-        return this.noteWidth * 1.125;
+        return this.noteWidth * 1.125 * game.getNoteRatio() / game.ratio;
     }
 
     /**
@@ -404,7 +404,7 @@ class Note {
         var ctx = game.context;
         var h = ctx.canvas.height * 2;
         var xPos = this.getXPos(game);
-        var width = this.getDetectWidth();
+        var width = this.getDetectWidth() * game.ratio;
 
         var result = false;
         touches.forEach(t => {
@@ -583,7 +583,7 @@ class HoldNote extends Note {
         
         if (this.hasSibling) {
             w *= 1060 / 989 * 1.025;
-            endH -= Math.ceil(ratio * 1060 / 989 * 2.5 - 0.75) + 0.5;
+            endH -= ratio * 1060 / 989;
         }
         ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH);
         ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos, w, headH);
@@ -1165,10 +1165,26 @@ class TouchInput {
 }
 
 class GameBase {
+    convertTouchXY(x, y) {
+        let offsetLeft = this.canvas.offsetLeft;
+        let offsetTop = this.canvas.offsetTop;
+
+        if (this.canvas.classList.contains("fullscreen")) {
+            offsetLeft = document.body.scrollLeft;
+            offsetTop = document.body.scrollTop;
+        }
+
+        return {
+            x: (x - offsetLeft) / this.canvas.offsetWidth * this.canvas.width,
+            y: (y - offsetTop) / this.canvas.offsetHeight * this.canvas.height
+        };
+    }
+
     handleTouchStart(id, x, y) {
         var nt = new TouchInput();
-        nt.xPos = (x - this.canvas.offsetLeft) / this.canvas.offsetWidth * this.canvas.width;
-        nt.yPos = (y - this.canvas.offsetTop) / this.canvas.offsetHeight * this.canvas.height;
+        let cv = this.convertTouchXY(x, y);
+        nt.xPos = cv.x;
+        nt.yPos = cv.y;
         nt.id = id;
         this.touches.push(nt);
     }
@@ -1183,8 +1199,9 @@ class GameBase {
             return;
         }
 
-        var _x = (x - this.canvas.offsetLeft) / this.canvas.offsetWidth * this.canvas.width;
-        var _y = (y - this.canvas.offsetTop) / this.canvas.offsetHeight * this.canvas.height;
+        let cv = this.convertTouchXY(x, y);
+        var _x = cv.x;
+        var _y = cv.y;
 
         nt.dX = _x - nt.xPos;
         nt.dY = _y - nt.yPos;
@@ -1750,28 +1767,28 @@ class Phigros extends GameBase {
 
         // -- Song title
         ctx.fillStyle = "#fff";
-        ctx.fillRect(pad + 30 * ratio, ch - 70 * ratio, 10 * ratio, 40 * ratio);
+        ctx.fillRect(pad + 30 * ratio, ch - 62 * ratio, 7.5 * ratio, 35 * ratio);
 
         ctx.textAlign = "left";
         ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
 
         var metrics = ctx.measureText(this.songName);
-        var sScale = metrics.width > (540 * ratio) ? (540 * ratio) / metrics.width : 1;
+        var sScale = metrics.width > (545 * ratio) ? (545 * ratio) / metrics.width : 1;
         ctx.font = `${28 * ratio * sScale}px ` + Assets.preferredFont;
         ctx.textBaseline = "middle";
-        ctx.fillText(this.songName, pad + 55 * ratio, ch - 50 * ratio);
+        ctx.fillText(this.songName, pad + 50 * ratio, ch - 45 * ratio);
 
         // -- Song difficulty & level
-        ctx.textBaseline = "alphabetic";
         ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
         ctx.textAlign = "right";
-        ctx.fillText(`${this.diffName} Lv.${this.diffLevel < 0 ? "?" : this.diffLevel}`, cw - pad - 40 * ratio, ch - 40 * ratio);
+        ctx.fillText(`${this.diffName} Lv.${this.diffLevel < 0 ? "?" : this.diffLevel}`, cw - pad - 40 * ratio, ch - 45 * ratio);
 
         // -- Combo
+        ctx.textBaseline = "alphabetic";
         if(combo >= 3) {
             ctx.textAlign = "center";
-            ctx.font = `500 ${24 * ratio}px ` + Assets.preferredFont;
-            ctx.fillText("COMBO", cw / 2, 90 * ratio);
+            ctx.font = `500 ${22 * ratio}px ` + Assets.preferredFont;
+            ctx.fillText("COMBO", cw / 2, 87 * ratio);
             ctx.font = `500 ${58 * ratio}px ` + Assets.preferredFont;
             ctx.fillText(combo, cw / 2, 60 * ratio);
         }
@@ -1786,6 +1803,29 @@ class Phigros extends GameBase {
             ctx.textAlign = "center";
             ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
             ctx.fillText("FPS: " + Math.round(10000 / this.deltaTime) / 10, cw / 2, ch - 10 * ratio);
+
+            let lw = ctx.lineWidth;
+            let alpha = ctx.globalAlpha;
+
+            ctx.globalAlpha = 0.5;
+            ctx.lineWidth = 3 * this.ratio;
+            ctx.fillStyle = "#fff";
+            ctx.strokeStyle = "#fff";
+            ctx.font = `${20 * ratio}px ` + Assets.preferredFont;
+            ctx.textBaseline = "middle";
+
+            let radius = 50;
+
+            this.touches.forEach(t => {
+                ctx.beginPath();
+                ctx.arc(t.xPos, t.yPos, radius * this.ratio, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillText(t.id, t.xPos, t.yPos - (radius + 25) * this.ratio)
+            });
+
+            ctx.lineWidth = lw;
+            ctx.globalAlpha = alpha;
         }
     }
 }

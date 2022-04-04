@@ -170,6 +170,8 @@
             var m = createMatch(navigator.userAgent);
             if(m(/iPhone/i) || m(/iPad/i) || m(/iPod/i) || (m(/Macintosh/i) && m(/Safari/i) && !m(/Chrome/i))) {
                 canvas.classList.add("fullscreen");
+                canvas.width = window.innerWidth * devicePixelRatio;
+                canvas.height = window.innerHeight * devicePixelRatio;
                 setTimeout(() => {
                     game.audioElem.play();
                 }, 1000);
