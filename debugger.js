@@ -69,6 +69,9 @@
     appearance.add(currentGame, "maxRatio").min(0.5).max(16 / 9).listen();
     appearance.add(currentGame, "smooth").min(1).listen();
     appearance.add(currentGame, "offScreenForceRender").listen();
+    appearance.add(currentGame, "songName").listen();
+    appearance.add(currentGame, "diffName").listen();
+    appearance.add(currentGame, "diffLevel").min(-1).max(20).step(1).listen();
     appearance.add(Helper, "toOverRes");
     appearance.add(Helper, "toHiRes").name("原生畫質模式");
     appearance.add(Helper, "toLowRes").name("一般畫質模式");
