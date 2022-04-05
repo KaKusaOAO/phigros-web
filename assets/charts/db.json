@@ -129,5 +129,27 @@
         "audio": "./assets/charts/six/base.wav",
         "chart": "./assets/charts/six/2err.json",
         "bg": "./assets/charts/six/bg.png"
+    },
+    {
+        "name": "Aleph-0",
+        "difficulty": {
+            "type": 2,
+            "level": 15
+        },
+        "audio": "./assets/charts/a0/base.wav",
+        "chart": "./assets/charts/a0/2.json",
+        "bg": "./assets/charts/a0/bg.png",
+        "legacy": true
+    },
+    {
+        "name": "Tempestissimo",
+        "source": "Arcaea",
+        "difficulty": {
+            "type": 3,
+            "level": 10
+        },
+        "audio": "./assets/charts/tptsm/base.wav",
+        "chart": "./assets/charts/tptsm/3.json",
+        "bg": "./assets/charts/tptsm/bg.jpg"
     }
 ]

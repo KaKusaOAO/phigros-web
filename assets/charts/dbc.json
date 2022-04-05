@@ -39,5 +39,16 @@
         "chart": "./assets/charts/spmd/3l.json",
         "bg": "./assets/charts/spmd/bg.png",
         "legacy": true
+    },
+    {
+        "name": "Aleph-0",
+        "difficulty": {
+            "type": 2,
+            "level": 15
+        },
+        "audio": "./assets/charts/a0/base.wav",
+        "chart": "./assets/charts/a0/2.json",
+        "bg": "./assets/charts/a0/bg.png",
+        "legacy": true
     }
 ]

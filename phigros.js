@@ -496,8 +496,9 @@ class TapNote extends Note {
         var w = this.noteWidth * ratio;
         var h = (this.hasSibling ? 32 : 18) * ratio;
 
-        if(!this.cleared)
-        ctx.drawImage(this.hasSibling ? Assets.tapHL : Assets.tap, -w / 2 + xPos, -h / 2 - yPos, w, h);
+        if(!this.cleared) {
+            ctx.drawImage(this.hasSibling ? Assets.tapHL : Assets.tap, -w / 2 + xPos, -h / 2 - yPos, w, h);
+        }
     }
 }
 
@@ -532,8 +533,9 @@ class FlickNote extends Note {
         var w = this.noteWidth * ratio;
         var h = (this.hasSibling ? 55 : 35) * ratio;
 
-        if(!this.cleared)
-        ctx.drawImage(this.hasSibling ? Assets.flickHL : Assets.flick, -w / 2 + xPos, -h / 2 - yPos, w, h);
+        if(!this.cleared) {
+            ctx.drawImage(this.hasSibling ? Assets.flickHL : Assets.flick, -w / 2 + xPos, -h / 2 - yPos, w, h);
+        }
     }
 }
 
@@ -558,7 +560,9 @@ class HoldNote extends Note {
     }
 
     getClearTime() {
-        return this.time + this.holdTime;
+        let ct = (this.time + this.holdTime) / (this.parent.bpm / 1875);
+        ct -= 250;
+        return Math.max(this.time, this.parent.getConvertedGameTime(ct));
     }
     
     /**
@@ -577,18 +581,20 @@ class HoldNote extends Note {
         var w = this.noteWidth * ratio;
         var h = (this.parent.getYPosWithGame(game, this.time + this.holdTime) - this.parent.getYPosWithGame(game, this.time));
 
-        var headH = Assets.holdHead.height / Assets.holdHead.width * w;
-        var endH = Assets.holdEnd.height / Assets.holdEnd.width * w;
-        ctx.drawImage(Assets.holdEnd, -w / 2 + xPos, -yPos - h, w, endH);
-        
-        if (this.hasSibling) {
-            w *= 1060 / 989 * 1.025;
-            endH -= ratio * 1060 / 989;
+        let gt = this.parent.getConvertedGameTime(game.time);
+        if (gt <= this.time + this.holdTime) {
+            var headH = Assets.holdHead.height / Assets.holdHead.width * w;
+            var endH = Assets.holdEnd.height / Assets.holdEnd.width * w;
+            ctx.drawImage(Assets.holdEnd, -w / 2 + xPos, -yPos - h, w, endH);
+            
+            if (this.hasSibling) {
+                w *= 1060 / 989 * 1.025;
+                endH -= ratio * 1060 / 989;
+            }
+            ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH);
+            ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos, w, headH);
         }
-        ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH);
-        ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos, w, headH);
 
-        var gt = this.parent.getConvertedGameTime(game.time);
         if(this.crossed && gt < this.time + this.holdTime) {
             var now = performance.now();
             if(now - this.lastJudge > 75) {
@@ -632,8 +638,9 @@ class CatchNote extends Note {
         var w = this.noteWidth * ratio * (this.hasSibling ? 1.08 : 1);
         var h = (this.hasSibling ? 28 : 12) * ratio;
 
-        if(!this.cleared)
-        ctx.drawImage(this.hasSibling ? Assets.catchHL : Assets.catch, -w / 2 + xPos, -h / 2 - yPos, w, h);
+        if(!this.cleared) {
+            ctx.drawImage(this.hasSibling ? Assets.catchHL : Assets.catch, -w / 2 + xPos, -h / 2 - yPos, w, h);
+        }
     }
 }
 
