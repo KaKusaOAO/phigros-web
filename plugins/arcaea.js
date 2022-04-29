@@ -244,6 +244,10 @@ if(typeof Chart !== "undefined") {
         return K.Maths.lerp(-4, 4, (x + 0.25) / 2 / 3 * 4);
     }
 
+    function arcXToPhigrosLine(x) {
+        return K.Maths.lerp(0.275, 0.725, (x + 0.25) / 2 / 3 * 4);
+    }
+
     function arcTimeToPhigros(time, bpm) {
         return time / 1875 * bpm;
     }
@@ -328,20 +332,49 @@ if(typeof Chart !== "undefined") {
                             var progress = (i - aTime) / (bTime - aTime);
                             c.positionX = arcXToPhigros(ArcaeaEasing.resolveX(event.start.x, event.end.x, progress, event.lineType));
                             c.parent = arcLine;
-                            c.noteWidth *= 0.5;
                             arcLine.notesAbove.push(c);
                         }
                     } else {
-                        var density = arcDensity / 2;
-                        for(var i = aTime; i < bTime; i += density) {
-                            var d = new DummyNote();
-                            d.time = i;
+                        var voidLine = new JudgeLine();
+                        voidLine.bpm = baseBPM;
 
-                            var progress = (i - aTime) / (bTime - aTime);
-                            d.positionX = arcXToPhigros(ArcaeaEasing.resolveX(event.start.x, event.end.x, progress, event.lineType));
-                            d.parent = arcLine;
-                            arcLine.notesAbove.push(d);
+                        var a1 = new StateEvent();
+                        a1.startTime = -99999999;
+                        a1.endTime = aTime;
+                        a1.start = a1.end = 0;
+
+                        var a2 = new StateEvent();
+                        a2.startTime = aTime;
+                        a2.endTime = bTime;
+                        a2.start = a2.end = 0.25;
+
+                        var a3 = new StateEvent();
+                        a3.startTime = bTime;
+                        a3.endTime = 99999999;
+                        a3.start = a3.end = 0;
+
+                        voidLine.judgeLineDisappearEvents.push(a1, a2, a3);
+
+                        for(var i = aTime; i < bTime; i++) {
+                            var s = new StateEvent();
+                            s.startTime = i;
+                            s.endTime = i+1;
+                            
+                            var pA = (i - aTime) / (bTime - aTime);
+                            s.start = arcXToPhigrosLine(ArcaeaEasing.resolveX(event.start.x, event.end.x, pA, event.lineType));
+                            var pB = (i+1 - aTime) / (bTime - aTime);
+                            s.end = arcXToPhigrosLine(ArcaeaEasing.resolveX(event.start.x, event.end.x, pB, event.lineType));
+                            s.start2 = s.end2 = 0.15;
+                            voidLine.judgeLineMoveEvents.push(s);
+
+                            var r = new StateEvent();
+                            r.startTime = i;
+                            r.endTime = i+1;
+                            r.start = r.end = 90 - (s.end - s.start) * 180;
+                            voidLine.judgeLineRotateEvents.push(r);
                         }
+
+                        chart.judgeLineList.push(voidLine);
 
                         event.arcTaps.forEach(t => {
                             var progress = (arcTimeToPhigros(t.time, baseBPM) - aTime) / (bTime - aTime);
