@@ -267,7 +267,7 @@ class Note {
         var px = Math.cos(rad) * xPos + linePos.x;
         var py = Math.sin(rad) * xPos + linePos.y;
 
-        var j = new JudgeEffect(game, px, py, 10);
+        var j = new JudgeEffect(game, px, py, 4);
         game.animatedObjects.push(j);
     }
 
@@ -325,6 +325,9 @@ class Note {
         }
     }
 
+    /**
+     * @param {GameBase} game
+     */
     getXPos(game) {
         var xPos = 0.845 * this.positionX / 15;
         var rp = this.parent.getRotatedPosition(game, { x: xPos, y: 0});
@@ -351,7 +354,7 @@ class Note {
             ctx.textAlign = "center";
             ctx.fillStyle = "#fff";
             ctx.font = `${28 * game.ratio}px ${Assets.preferredFont}`;
-            ctx.fillText(`bpm=${this.parent.bpm} t=${this.time / 32}`, xPos, yPos);
+            ctx.fillText(`bpm=${this.parent.bpm} t=${this.time / 32} f=${this.floorPosition}`, xPos, yPos);
         }
     }
 
@@ -459,11 +462,13 @@ class DummyNote extends Note {
 
         if(!this.crossed) {
             // ctx.drawImage(this.hasSibling ? Assets.tapHL : Assets.tap, -w / 2 + xPos, -h / 2 - yPos, w, h);
-            ctx.beginPath();
+            // ctx.beginPath();
             ctx.globalAlpha = 0.4;
             ctx.fillStyle = "#fff";
-            ctx.arc(xPos, -yPos, 5 * ratio, 0, Math.PI * 2);
-            ctx.fill();
+            // ctx.arc(xPos, -yPos, 5 * ratio, 0, Math.PI * 2);
+            // ctx.fill();
+            var thickness = 8 * game.getNoteRatio();
+            ctx.fillRect(-ctx.canvas.width * 2, -yPos - thickness / 2, ctx.canvas.width * 4, thickness);
             ctx.globalAlpha = 1;
         }
     }
@@ -591,8 +596,8 @@ class HoldNote extends Note {
                 w *= 1060 / 989 * 1.025;
                 endH -= ratio * 1060 / 989;
             }
-            ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH);
-            ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos, w, headH);
+            ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH - headH);
+            ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos - headH, w, headH);
         }
 
         if(this.crossed && gt < this.time + this.holdTime) {
@@ -659,6 +664,7 @@ class SpeedEvent extends ChartEvent {
     constructor() {
         super();
         this.value = 1;
+        this.floorPosition = 0;
     }
 
     static deserialize(raw) {
@@ -772,8 +778,15 @@ class JudgeLine {
             note.parent = line;
             return note;
         });
+
+        var posY = 0;
         line.speedEvents = raw.speedEvents.map(e => {
-            return SpeedEvent.deserialize(e);
+            var ev = SpeedEvent.deserialize(e);
+            if (version == 3) return ev;
+
+            ev.floorPosition = posY;
+            posY += ev.value * (ev.endTime - ev.startTime) / line.bpm * 1.875;
+            return ev;
         });
 
         line.judgeLineDisappearEvents = raw.judgeLineDisappearEvents.map(e => {
@@ -864,12 +877,12 @@ class JudgeLine {
             n.update(game);
             if(n.isOffScreen(game) && !game.offScreenForceRender) return;
 
-            var speed = this.getSpeed(time);
-            // var doClip = speed < 0 || n.doesClipOnPositiveSpeed();
-            var doClip = (speed < 0 || n.doesClipOnPositiveSpeed()) && (!n.isOffScreen(game) || game.offScreenForceRender);
+            var f = this.getCurrentFloorPosition();
+            var doClip = f != f ? (this.getSpeed(game.time) < 0 ? n.doesClipOnPositiveSpeed() : true) : n.floorPosition < this.getCurrentFloorPosition();
             if(game.renderDebug) {
                 n._renderTouchArea(game);
             }
+            
             if(doClip) {
                 ctx.save();
                 ctx.beginPath();
@@ -913,8 +926,8 @@ class JudgeLine {
                 ctx.scale(1, -1);
                 ctx.textAlign = "center";
                 ctx.font = `${28 * game.ratio}px ${Assets.preferredFont}`;
-                ctx.fillText(`a=${this.notesAbove.length} b=${this.notesBelow.length} bpm=${this.bpm} t=${Math.floor(this.getConvertedGameTime(game.time) / 32)}`,
-                    0, -8 * ratio);
+                ctx.fillText(`a=${this.notesAbove.length} b=${this.notesBelow.length} bpm=${this.bpm} t=${Math.floor(this.getConvertedGameTime(game.time) / 32)} f=${this.getCurrentFloorPosition()}`,
+                    0, -24 * ratio);
             }
 
             ctx.fillStyle = "#000";
@@ -930,16 +943,23 @@ class JudgeLine {
         return time * (this.bpm / 1875);
     }
 
+    getRealTime(time) {
+        return time * 1875 / this.bpm;
+    }
+
     /**
      * @param {number} time
      */
     getYPosition(game, time) {
-        var multiplier = 10 / game.refScreenHeight * game.canvas.height / Math.pow(this.bpm / 127, 1.5);
-        multiplier *= 1.17;
+        var event = this.speedEvents.find(e => {
+            return time >= e.startTime && time < e.endTime;
+        });
+        if(event == null) event = this.speedEvents[0];
+        if(event == null) return 0;
+        
+        return (event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value) * game.canvas.height * 0.6;
 
-        if(game.useUniqueSpeed) {
-            return multiplier * time;
-        }
+        var multiplier = game.canvas.height * 1.875 / this.bpm * 0.6;
 
         if(this.meter.length == 0) {
             this.meter = [];
@@ -979,6 +999,17 @@ class JudgeLine {
     getYPosWithGame(game, time) {
         var gt = this.getConvertedGameTime(game.time);
         return this.getYPosition(game, time) - this.getYPosition(game, gt);
+    }
+
+    getCurrentFloorPosition() {
+        var time = this.getConvertedGameTime(game.time);
+        var event = this.speedEvents.find(e => {
+            return time > e.startTime && time <= e.endTime;
+        });
+        if(event == null) event = this.speedEvents[0];
+        if(event == null) return 0;
+        
+        return event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value;
     }
 
     getSpeed(_time) {
@@ -1292,7 +1323,7 @@ class GameBase {
         this.enableParticles = true;
         this.useUniqueSpeed = false;
         this.offScreenForceRender = false;
-        this.enableDummyNotes = false;
+        this.enableDummyNotes = true;
 
         // Events
         this.canvas.addEventListener("touchstart", e => {
@@ -1480,8 +1511,13 @@ class GameBase {
 
     async loadChartWithAudio(chartPath, audioPath) {
         var chart = await (await fetch(chartPath, { cache: "no-cache" })).json();
-        chart = Chart.deserialize(chart, this.enableDummyNotes);
+        chart = Chart.deserialize(chart, true);
         this.chart = chart;
+        
+        await this.loadAudio(audioPath);
+    }
+
+    async loadAudio(audioPath) {
         this.audioElem.src = audioPath;
 
         var ctx = this.audioContext;
@@ -1548,8 +1584,15 @@ class GameBase {
 
         var offset = this.chart ? this.chart.offset * 1000 : 0;
         offset += this.audioOffset;
-        var smooth = this.isPlaying ? 1 : Math.max(0, Math.min(1, (this.deltaTime / this.smooth)));
-        this.time = K.Maths.lerp(this.time, this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime, smooth);
+        var smooth = Math.max(0, Math.min(1, (this.deltaTime / this.smooth)));
+        
+        if (!this.isPlaying) {
+            this.time = K.Maths.lerp(this.time, this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime, smooth);
+        } else {
+            this.time += this.deltaTime * this.audioElem.playbackRate;
+            var actualTime = this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime;
+            if (Math.abs(this.time - actualTime) > 16) this.time = actualTime;
+        }
 
         if(!this.audioContext) {
             this.isPlaying = true;
