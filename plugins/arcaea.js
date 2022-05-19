@@ -34,8 +34,9 @@ class ArcaeaHoldEvent extends ArcaeaEvent {
 }
 
 class ArcaeaTimingGroup {
-    constructor(isPrimary) {
+    constructor(isPrimary, args = "") {
         this.isPrimary = isPrimary;
+        this.args = args.split("_");
 
         /** @type {ArcaeaEvent[]} */
         this.events = [];
@@ -45,6 +46,10 @@ class ArcaeaTimingGroup {
         return this.events.find(n => {
             return n instanceof ArcaeaTimingEvent;
         }).bpm;
+    }
+
+    isNoInput() {
+        return this.args.indexOf("noinput") != -1;
     }
 }
 
@@ -124,7 +129,8 @@ class ArcaeaChart {
     }
 
     static async load(basePath, diff, arcDensity = 1, speedMultiplier = 1) {
-        game.chart = Chart.fromArcaea(ArcaeaChart.deserialize(await (await fetch(`${basePath}/${diff}.aff`)).text()), arcDensity, speedMultiplier);
+        var chart = ArcaeaChart.deserialize(await (await fetch(`${basePath}/${diff}.aff`)).text());
+        game.chart = Chart.fromArcaea(chart, arcDensity, speedMultiplier);
         await game.loadAudio(`${basePath}/base.ogg`);
     }
 
@@ -156,31 +162,42 @@ class ArcaeaChart {
             }
 
             if(state == 1) {
+                line = line.trim();
                 if(line.startsWith("timinggroup(")) {
-                    var group = new ArcaeaTimingGroup(false);
+                    var group = new ArcaeaTimingGroup(false, line.substring("timinggroup(".length, line.length - 2));
                     chart.timingGroups.push(group);
                     targetGroup = group;
+                    console.group("TimingGroup:", group);
                 } else if(line.startsWith("};")) {
                     targetGroup = primaryGroup;
+                    console.groupEnd();
                 } else if(line.startsWith("timing(")) {
                     var event = line.substring("timing(".length, line.length - 2).split(",");
-                    targetGroup.events.push(new ArcaeaTimingEvent(
+                    let ev = new ArcaeaTimingEvent(
                         parseFloat(event[0]), parseFloat(event[1]), parseFloat(event[2])
-                    ));
+                    );
+                    targetGroup.events.push(ev);
+                    console.log("Timing: ", ev);
                 } else if(line.startsWith("(")) {
                     // Single Note
                     var event = line.substring(1, line.length - 2).split(",");
-                    targetGroup.events.push(new ArcaeaTapEvent(
+                    let ev = new ArcaeaTapEvent(
                         parseFloat(event[0]), parseFloat(event[1]),
-                    ));
+                    );
+                    targetGroup.events.push(ev);
+                    console.log("Tap: ", ev);
                 } else if(line.startsWith("arc(")) {
-                    targetGroup.events.push(ArcaeaArcEvent.readLine(line));
+                    let ev = ArcaeaArcEvent.readLine(line);
+                    targetGroup.events.push(ev);
+                    console.log("Arc: ", ev);
                 } else if(line.startsWith("hold(")) {
                     // Single Hold note
                     var event = line.substring("hold(".length, line.length - 2).split(",");
-                    targetGroup.events.push(new ArcaeaHoldEvent(
+                    let ev = new ArcaeaHoldEvent(
                         parseFloat(event[0]), parseFloat(event[1]), parseFloat(event[2])
-                    ));
+                    );
+                    targetGroup.events.push(ev);
+                    console.log("Hold: ", ev);
                 }
             }
         });
@@ -268,11 +285,14 @@ if(typeof Chart !== "undefined") {
      * @param {*} arcDensity 
      */
     Chart.fromArcaea = (arcaea, arcDensity, speedMultiplier = 1) => {
+        console.log("Loading from Arcaea chart:", arcaea);
         var chart = new Chart();
         chart.offset = arcaea.offset * -0.001;
         var baseBPM = arcaea.getPrimaryGroup().getBaseBPM();
 
         arcaea.timingGroups.forEach(g => {
+            if (g.isNoInput()) return;
+
             var arcLine = new JudgeLine();
             var notesLine = new JudgeLine();
     
@@ -282,21 +302,26 @@ if(typeof Chart !== "undefined") {
             var s1 = new StateEvent();
             s1.startTime = 0;
             s1.endTime = 99999999;
-            s1.start = 0.5;
-            s1.end = 0.5;
-            s1.start2 = 0.15;
-            s1.end2 = 0.15;
+            s1.start = s1.end = 0.5;
+            s1.start2 = s1.end2 = 0.15;
     
             var s2 = new StateEvent();
             s2.startTime = 0;
             s2.endTime = 99999999;
-            s2.start = 0.5;
-            s2.end = 0.5;
-            s2.start2 = 0.15;
-            s2.end2 = 0.15;
+            s2.start = s2.end = 0.5;
+            s2.start2 = s2.end2 = 0.15;
+
+            var a1 = new StateEvent();
+            a1.startTime = 0;
+            a1.endTime = 99999999;
+            a1.start = a1.end = 1;
+            a1.start2 = a1.end2 = 0;
             
             arcLine.judgeLineMoveEvents.push(s1);
             notesLine.judgeLineMoveEvents.push(s2);
+
+            arcLine.judgeLineDisappearEvents.push(a1);
+            notesLine.judgeLineDisappearEvents.push(a1);
 
             chart.judgeLineList.push(arcLine, notesLine);
         
@@ -349,53 +374,16 @@ if(typeof Chart !== "undefined") {
 
                 return (event.floorPosition + (time - event.startTime) * 1.875 / notesLine.bpm * event.value) * 0.6;
             };
+            
+            let getSpeed = time => {
+                var event = notesLine.speedEvents.find(e => {
+                    return time >= e.startTime && time < e.endTime;
+                });
+                if(event == null) event = notesLine.speedEvents[0];
+                if(event == null) return speedMultiplier;
 
-            speeds.forEach((ev, i) => {
-                if (i == 0) return;
-                var isLast = i == speeds.length - 1;
-
-                if (ev.speed != 0 && ev.beatsPerLine != 0 && g.isPrimary) {
-                    var bpm = notesLine.bpm;
-                    var realBpm = Math.abs(ev.speed) * baseBPM;
-                    var timePerLine = arcTimeToPhigros(60000 / realBpm * ev.beatsPerLine, baseBPM);
-                    for (var t = ev.time; t < (isLast ? (maxTime + 32 * 4) : ev.endTime) - 1; t += timePerLine) {
-                        var line = new JudgeLine();
-                        line.bpm = bpm;
-
-                        var a2 = new StateEvent();
-                        a2.startTime = 0;
-                        a2.endTime = t;
-                        a2.start = a2.end = 0.5;
-
-                        var a3 = new StateEvent();
-                        a3.startTime = t;
-                        a3.endTime = 99999999;
-                        a3.start = a3.end = 0;
-                        line.judgeLineDisappearEvents.push(a2, a3);
-
-                        for (var k=0; k<notesLine.speedEvents.length; k++) {
-                            var spev = notesLine.speedEvents[k];
-                            var et = Math.min(spev.endTime, t);
-
-                            var currPos0 = getFloorPosition(spev.startTime);
-                            var currPos = getFloorPosition(et);
-                            var linePos = getFloorPosition(t);
-
-                            var s = new StateEvent();
-                            s.startTime = spev.startTime;
-                            s.endTime = et;
-                            s.start = s.end = 0.5;
-                            s.start2 = linePos - currPos0 + 0.15;
-                            s.end2 = linePos - currPos + 0.15;
-                            line.judgeLineMoveEvents.push(s);
-
-                            if (et == t) break;
-                        }
-
-                        chart.judgeLineList.push(line);
-                    }                        
-                }
-            });
+                return event.value;
+            };
 
             g.events.forEach(event => {
                 if(event instanceof ArcaeaTapEvent) {
@@ -412,6 +400,7 @@ if(typeof Chart !== "undefined") {
                     maxTime = Math.max(maxTime, hold.time + hold.holdTime);
                     hold.positionX = laneToX(event.lane);
                     hold.parent = notesLine;
+                    hold.speed = getSpeed(hold.time);
                     notesLine.notesAbove.push(hold);
                 } else if(event instanceof ArcaeaArcEvent) {
                     // This would be the most complicated process.
@@ -473,11 +462,11 @@ if(typeof Chart !== "undefined") {
 
                         for(var i = aTime; i < bTime; i++) {
                             var pA = (i - aTime) / (bTime - aTime);
-                            var pB = (i+1 - aTime) / (bTime - aTime);
+                            var pB = (Math.min(i+1, bTime) - aTime) / (bTime - aTime);
 
                             var s = new StateEvent();
                             s.startTime = i;
-                            s.endTime = i+1;
+                            s.endTime = Math.min(i+1, bTime);
                             s.start = arcXToPhigrosLine(ArcaeaEasing.resolveX(event.start.x, event.end.x, pA, event.lineType));
                             s.end = arcXToPhigrosLine(ArcaeaEasing.resolveX(event.start.x, event.end.x, pB, event.lineType));
                             s.start2 = s.end2 = 0.15;
@@ -485,13 +474,13 @@ if(typeof Chart !== "undefined") {
 
                             var r = new StateEvent();
                             r.startTime = i;
-                            r.endTime = i+1;
+                            r.endTime = Math.min(i+1, bTime);
                             r.start = r.end = 90 - (s.end - s.start) * 180;
                             voidLine.judgeLineRotateEvents.push(r);
 
                             var a2 = new StateEvent();
                             a2.startTime = i;
-                            a2.endTime = i+1;
+                            a2.endTime = Math.min(i+1, bTime);
                             a2.start = arcYToPhigrosAlpha(ArcaeaEasing.resolveY(event.start.y, event.end.y, pA, event.lineType));
                             a2.end = arcYToPhigrosAlpha(ArcaeaEasing.resolveY(event.start.y, event.end.y, pB, event.lineType));
                             voidLine.judgeLineDisappearEvents.push(a2);
@@ -517,12 +506,59 @@ if(typeof Chart !== "undefined") {
                 }
             });
 
+            speeds.forEach((ev, i) => {
+                if (i == 0) return;
+                var isLast = i == speeds.length - 1;
+
+                if (ev.speed != 0 && ev.beatsPerLine != 0 && g.isPrimary) {
+                    var bpm = notesLine.bpm;
+                    var realBpm = Math.abs(ev.speed) * baseBPM;
+                    var timePerLine = arcTimeToPhigros(60000 / realBpm * ev.beatsPerLine, baseBPM);
+                    for (var t = ev.time; t < (isLast ? (maxTime + 32 * 4) : ev.endTime) - 1; t += timePerLine) {
+                        var line = new JudgeLine();
+                        line.bpm = bpm;
+
+                        var a2 = new StateEvent();
+                        a2.startTime = 0;
+                        a2.endTime = t;
+                        a2.start = a2.end = 0.5;
+
+                        var a3 = new StateEvent();
+                        a3.startTime = t;
+                        a3.endTime = 99999999;
+                        a3.start = a3.end = 0;
+                        line.judgeLineDisappearEvents.push(a2, a3);
+
+                        for (var k=0; k<notesLine.speedEvents.length; k++) {
+                            var spev = notesLine.speedEvents[k];
+                            var et = Math.min(spev.endTime, t);
+
+                            var currPos0 = getFloorPosition(spev.startTime);
+                            var currPos = getFloorPosition(et);
+                            var linePos = getFloorPosition(t);
+
+                            var s = new StateEvent();
+                            s.startTime = spev.startTime;
+                            s.endTime = et;
+                            s.start = s.end = 0.5;
+                            s.start2 = linePos - currPos0 + 0.15;
+                            s.end2 = linePos - currPos + 0.15;
+                            line.judgeLineMoveEvents.push(s);
+
+                            if (et == t) break;
+                        }
+
+                        chart.judgeLineList.push(line);
+                    }                        
+                }
+            });
+
             [].push.apply(chart.judgeLineList, voidLines);
 
             [notesLine, arcLine].forEach(ln => {
                 [ln.notesAbove, ln.notesBelow].forEach(arr => {
                     arr.forEach(n => {
-                        n.floorPosition = getFloorPosition(n.time);
+                        n.floorPosition = getFloorPosition(n.time) / 0.6;
                     });
                 });
             });

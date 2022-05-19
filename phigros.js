@@ -1012,6 +1012,32 @@ class JudgeLine {
         return event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value;
     }
 
+    recalculateSpeedEventsFloorPosition() {
+        var posY = 0;
+        this.speedEvents.forEach(ev => {
+            ev.floorPosition = posY;
+            posY += ev.value * (ev.endTime - ev.startTime) / this.bpm * 1.875;
+        });
+    }
+
+    recalculateNotesFloorPosition() {
+        this.notesAbove.forEach(n => {
+            var time = n.time;
+            var event = this.speedEvents.find(e => {
+                return time > e.startTime && time <= e.endTime;
+            });
+            if(event == null) event = this.speedEvents[0];
+            if(event == null) return 0;
+            
+            n.floorPosition = event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value;
+        });
+    }
+
+    recalculateFloorPosition() {
+        this.recalculateSpeedEventsFloorPosition();
+        this.recalculateNotesFloorPosition();
+    }
+
     getSpeed(_time) {
         var time = this.getConvertedGameTime(_time);
         var event = this.speedEvents.find(e => {
@@ -1150,6 +1176,10 @@ class Chart {
         });
 
         return data;
+    }
+
+    recalculateFloorPosition() {
+        this.judgeLineList.forEach(ln => ln.recalculateFloorPosition());
     }
 }
 
