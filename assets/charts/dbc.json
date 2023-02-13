@@ -1,0 +1,65 @@
+[
+    {
+        "name": "Fracture Ray",
+        "difficulty": {
+            "type": 3,
+            "level": 16
+        },
+        "audio": "./assets/charts/fracture_ray/base.mp3",
+        "chart": "./assets/charts/fracture_ray/3.json",
+        "bg": "./assets/charts/fracture_ray/bg.png",
+        "lineTextures": [
+            {
+                "index": 31,
+                "image": "./assets/charts/fracture_ray/anomaly.png",
+                "pos": [1, 1]
+            },
+            {
+                "index": 30,
+                "image": "./assets/charts/fracture_ray/portrait.png",
+                "pos": [1.1, 1.9]
+            }
+        ]
+    },
+    {
+        "name": "Sigma (Haocore Mix) ~ Regrets of The Yellow Tulip ~",
+        "difficulty": {
+            "type": 4,
+            "level": -1
+        },
+        "audio": "./assets/charts/sigma_apf/base.wav",
+        "chart": "./assets/charts/sigma_apf/4.json",
+        "bg": "./assets/charts/sigma_apf/bg.png"
+    },
+    {
+        "name": "Rrhar'il",
+        "difficulty": {
+            "type": 3,
+            "level": 16
+        },
+        "audio": "./assets/charts/rrhar/base.wav",
+        "chart": "./assets/charts/rrhar/3.json",
+        "bg": "./assets/charts/rrhar/bg.png"
+    },
+    {
+        "name": "Spasmodic",
+        "difficulty": {
+            "type": 3,
+            "level": 16
+        },
+        "audio": "./assets/charts/spmd/base.wav",
+        "chart": "./assets/charts/spmd/3.json",
+        "bg": "./assets/charts/spmd/bg.png"
+    },
+    {
+        "name": "Spasmodic",
+        "difficulty": {
+            "type": 3,
+            "level": 16
+        },
+        "audio": "./assets/charts/spmd/base.wav",
+        "chart": "./assets/charts/spmd/3l.json",
+        "bg": "./assets/charts/spmd/bg.png",
+        "legacy": true
+    }
+]
