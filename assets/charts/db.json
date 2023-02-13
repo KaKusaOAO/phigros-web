@@ -131,15 +131,5 @@
         "audio": "./assets/charts/a0/base.wav",
         "chart": "./assets/charts/a0/2.json",
         "bg": "./assets/charts/a0/bg.png"
-    },
-    {
-        "name": "Spasmodic",
-        "difficulty": {
-            "type": 3,
-            "level": 16
-        },
-        "audio": "./assets/charts/spm/base.wav",
-        "chart": "./assets/charts/spm/3.json",
-        "bg": "./assets/charts/spm/bg.png"
     }
 ]
