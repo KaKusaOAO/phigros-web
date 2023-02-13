@@ -930,10 +930,14 @@ class JudgeLine {
                 ctx.fillRect(-cw * 2, thickness / -2, cw * 4, thickness); 
             } else {
                 var img = this.texture;
-                var iw = (img.width / img.height);
-                var ih = 1;
+                var unit = 900;
+                var iw = img.width / unit * ch; 
+                var ih = img.height / unit * ch;
 
-                ctx.drawImage(img, ch * this.texturePos[0] * -0.5 * iw, ch * this.texturePos[1] * -0.5 * ih, ch * iw, ch * ih);
+                var xOffset = ih * (this.texturePos[0] - 1) / 4;
+                var yOffset = ih * (this.texturePos[1] - 1) / 4;
+
+                ctx.drawImage(img, -iw / 2 - xOffset, -ih / 2 - yOffset, iw, ih);
                 ctx.setTransform(lt);
             }
 
@@ -1066,6 +1070,11 @@ class JudgeLine {
         });
         if(event == null) event = this.judgeLineDisappearEvents[0];
         if(event == null) return 1;
+
+        // 0 duration disappear events?
+        if (event.endTime == event.startTime) {
+            return (event.start + event.end) / 2;
+        }
 
         var progress = (time - event.startTime) / (event.endTime - event.startTime);
         return K.Maths.lerp(event.start, event.end, progress);
