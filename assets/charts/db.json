@@ -1,5 +1,27 @@
 [
     {
+        "name": "Fracture Ray",
+        "difficulty": {
+            "type": 3,
+            "level": 16
+        },
+        "audio": "./assets/charts/fracture_ray/base.mp3",
+        "chart": "./assets/charts/fracture_ray/3.json",
+        "bg": "./assets/charts/fracture_ray/bg.png",
+        "lineTextures": [
+            {
+                "index": 31,
+                "image": "./assets/charts/fracture_ray/anomaly.png",
+                "pos": [1, 1]
+            },
+            {
+                "index": 30,
+                "image": "./assets/charts/fracture_ray/portrait.png",
+                "pos": [1.1, 1.9]
+            }
+        ]
+    },
+    {
         "name": "Stasis",
         "difficulty": {
             "type": 3,

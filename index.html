@@ -101,6 +101,7 @@
     <!-- Chart plugins -->
     <script src="./plugins/bestdori.js"></script>
     <script src="./plugins/arcaea.js"></script>
+    <script src="./plugins/pec.js"></script>
 
     <script>
         function hasQuery(key) {
@@ -249,7 +250,7 @@
                     var loadCell = create("td");
                     loadCell.innerHTML = `<button class="btn btn-link">載入</button>`;
                     loadCell.children[0].addEventListener("click", e => {
-                        game.loadChartWithAudio(item.chart, item.audio);
+                        game.loadChartWithAudio(item.chart, item.audio, item.lineTextures ?? []);
                         game.songName = item.name;
                         game.diffName = Constants.difficulties[item.difficulty.type] || "SP";
                         game.diffLevel = item.difficulty.level;

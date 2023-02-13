@@ -276,14 +276,7 @@ class Note {
     }
 
     isOffScreen(game) {
-        var ns = this.time;
-        var ne = ns + (this.holdTime || 0);
-        var gt = this.parent.getConvertedGameTime(game.time);
-        if (gt >= ns && gt <= ne) return false;
-
-        var r = Math.max(game.canvas.width, game.canvas.height);
-        return (Math.abs(this.parent.getYPosWithGame(game, this.time)) > r
-            && Math.abs(this.parent.getYPosWithGame(game, this.time + (this.holdTime || 0))) > r);
+        return Math.abs(this.floorPosition - this.parent.getCurrentFloorPosition()) > 10;
     }
 
     isDummy() {
@@ -342,13 +335,17 @@ class Note {
         return xPos;
     }
 
+    getYPos(game) {
+        return this.parent.getYPosByFloorPos(game, this.floorPosition - this.parent.getCurrentFloorPosition());
+    }
+
     /**
      * @param {GameBase} game
      */
     render(game) {
         if(game.renderDebug && !this.cleared && (!this.isOffScreen(game) || game.offScreenForceRender) && !this.isDummy()) {
             var ctx = game.context;
-            var yPos = -this.parent.getYPosWithGame(game, this.time) * (this instanceof HoldNote ? 1 : (game.useUniqueSpeed ? 1 : this.speed)) + 40 * game.ratio;
+            var yPos = -this.getYPos(game) * (this instanceof HoldNote ? 1 : (game.useUniqueSpeed ? 1 : this.speed)) + 40 * game.ratio;
             var xPos = this.getXPos(game);
 
             ctx.textAlign = "center";
@@ -454,7 +451,7 @@ class DummyNote extends Note {
 
         var ctx = game.context;
         var ratio = game.getNoteRatio();
-        var yPos = this.parent.getYPosWithGame(game, this.time) * (game.useUniqueSpeed ? 1 : this.speed);
+        var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
         var w = this.noteWidth * ratio;
@@ -495,7 +492,7 @@ class TapNote extends Note {
 
         var ctx = game.context;
         var ratio = game.getNoteRatio();
-        var yPos = this.parent.getYPosWithGame(game, this.time) * (game.useUniqueSpeed ? 1 : this.speed);
+        var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
         var w = this.noteWidth * ratio;
@@ -532,7 +529,7 @@ class FlickNote extends Note {
 
         var ctx = game.context;
         var ratio = game.getNoteRatio();
-        var yPos = this.parent.getYPosWithGame(game, this.time) * (game.useUniqueSpeed ? 1 : this.speed);
+        var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
         var w = this.noteWidth * ratio;
@@ -580,7 +577,7 @@ class HoldNote extends Note {
         
         var ctx = game.context;
         var ratio = game.getNoteRatio();
-        var yPos = this.parent.getYPosWithGame(game, this.time);
+        var yPos = this.getYPos(game);
         var xPos = this.getXPos(game);
 
         var w = this.noteWidth * ratio;
@@ -637,7 +634,7 @@ class CatchNote extends Note {
         
         var ctx = game.context;
         var ratio = game.getNoteRatio();
-        var yPos = this.parent.getYPosWithGame(game, this.time) * (game.useUniqueSpeed ? 1 : this.speed);
+        var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
         var w = this.noteWidth * ratio * (this.hasSibling ? 1.08 : 1);
@@ -701,7 +698,12 @@ class StateEvent extends ChartEvent {
 
 class JudgeLine {
     constructor() {
+        this.index = -1;
+
         this.bpm = 0;
+
+        /** @type {Image | null} */
+        this.texture = null;
 
         /** @type {SpeedEvent[]} */
         this.speedEvents = [];
@@ -762,6 +764,8 @@ class JudgeLine {
 
     static deserialize(raw, version, i, withDummy) {
         var line = new JudgeLine();
+        line.index = i;
+
         line.bpm = raw.bpm;
 
         line.notesAbove = raw.notesAbove.filter(n => {
@@ -903,6 +907,8 @@ class JudgeLine {
         this.notesBelow.filter(n => n instanceof HoldNote).forEach(noteRenderFn);
         this.notesBelow.filter(n => !(n instanceof HoldNote)).forEach(noteRenderFn);
 
+        ctx.scale(1, -1);
+
         var lt = ctx.getTransform();
         ctx.setTransform(t);
 
@@ -912,21 +918,29 @@ class JudgeLine {
             ctx.fillStyle = "#fff";
 
             if (game.renderDebug) {
-                ctx.globalAlpha *= 0.875;
-                ctx.globalAlpha += 0.125;
+                // ctx.globalAlpha *= 0.875;
+                // ctx.globalAlpha += 0.125;
                 ctx.beginPath();
                 ctx.arc(0, 0, 20 * game.ratio, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
-            var thickness = 8 * game.getNoteRatio();
-            ctx.fillRect(-cw * 2, thickness / -2, cw * 4, thickness);
+            if (this.texture == null) {
+                var thickness = 8 * game.getNoteRatio();
+                ctx.fillRect(-cw * 2, thickness / -2, cw * 4, thickness); 
+            } else {
+                var img = this.texture;
+                var iw = (img.width / img.height);
+                var ih = 1;
+
+                ctx.drawImage(img, ch * this.texturePos[0] * -0.5 * iw, ch * this.texturePos[1] * -0.5 * ih, ch * iw, ch * ih);
+                ctx.setTransform(lt);
+            }
 
             if(game.renderDebug) {
-                ctx.scale(1, -1);
                 ctx.textAlign = "center";
                 ctx.font = `${28 * game.ratio}px ${Assets.preferredFont}`;
-                ctx.fillText(`a=${this.notesAbove.length} b=${this.notesBelow.length} bpm=${this.bpm} t=${Math.floor(this.getConvertedGameTime(game.time) / 32)} f=${this.getCurrentFloorPosition()}`,
+                ctx.fillText(`[${this.index}] a=${this.notesAbove.length} b=${this.notesBelow.length} bpm=${this.bpm} t=${Math.floor(this.getConvertedGameTime(game.time) / 32)} f=${this.getCurrentFloorPosition()}`,
                     0, -24 * ratio);
             }
 
@@ -936,6 +950,7 @@ class JudgeLine {
         });
     }
 
+    // The game time refers to the unit used in the chart.
     getConvertedGameTime(time) {
         // Phigros is using a kind of unit which 32 units are a beat.
         // The length of an unit can be calculated by the formula below.
@@ -951,49 +966,11 @@ class JudgeLine {
      * @param {number} time
      */
     getYPosition(game, time) {
-        var event = this.speedEvents.find(e => {
-            return time >= e.startTime && time < e.endTime;
-        });
-        if(event == null) event = this.speedEvents[0];
-        if(event == null) return 0;
-        
-        return (event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value) * game.canvas.height * 0.6;
+        return this.getYPosByFloorPos(game, this.getCalculatedFloorPosition(time));
+    }
 
-        var multiplier = game.canvas.height * 1.875 / this.bpm * 0.6;
-
-        if(this.meter.length == 0) {
-            this.meter = [];
-            var meter = 0;
-            var event = this.speedEvents[0];
-
-            var i = 0;
-            var lastStartMark = 0;
-            var lastSpeed = 1;
-            while(event != null) {
-                lastStartMark = event.startTime;
-                lastSpeed = event.value;
-
-                var m = meter;
-                meter += (event.endTime - lastStartMark) * lastSpeed;
-                this.meter.push({
-                    time: event.startTime,
-                    endTime: event.endTime,
-                    startY: m,
-                    endY: meter,
-                    speed: lastSpeed
-                });
-                event = this.speedEvents[++i];
-            }
-        }
-
-        var i = 0;
-        var meter = this.meter[0];
-        var y = 0;
-        while(meter != null && meter.time < time) {
-            y = meter.startY + meter.speed * (time - meter.time);
-            meter = this.meter[++i];
-        }
-        return y * multiplier;
+    getYPosByFloorPos(game, floor) {
+        return floor * game.canvas.height * 0.6;
     }
 
     getYPosWithGame(game, time) {
@@ -1003,6 +980,10 @@ class JudgeLine {
 
     getCurrentFloorPosition() {
         var time = this.getConvertedGameTime(game.time);
+        return this.getCalculatedFloorPosition(time);
+    }
+
+    getCalculatedFloorPosition(time) {
         var event = this.speedEvents.find(e => {
             return time > e.startTime && time <= e.endTime;
         });
@@ -1541,10 +1522,11 @@ class GameBase {
         return 0;
     }
 
-    async loadChartWithAudio(chartPath, audioPath) {
+    async loadChartWithAudio(chartPath, audioPath, lineTextures) {
         var chart = await (await fetch(chartPath, { cache: "no-cache" })).json();
         chart = Chart.deserialize(chart, true);
         this.chart = chart;
+        this.handleLineTextures(lineTextures);
         
         await this.loadAudio(audioPath);
     }
@@ -1782,6 +1764,19 @@ class GameBase {
         ctx.textAlign = "left";
         ctx.fillStyle = "#000";
     }
+
+    handleLineTextures(textures) {
+        if (typeof textures === "undefined") return;
+        textures.forEach(meta => {
+            if (typeof meta.image !== "undefined" && typeof meta.index !== "undefined") {
+                var line = this.chart.judgeLineList[meta.index];
+                var img = new Image();
+                img.src = meta.image;
+                line.texture = img;
+                line.texturePos = meta.pos ?? [1, 1];
+            }
+        });
+    }
 }
 
 class Phigros extends GameBase {
@@ -1800,24 +1795,26 @@ class Phigros extends GameBase {
         var combo = 0;
         var score = 0;
 
+        var maxValidTime = this.audioElem.duration * 1000;
+
         if(this.chart != null) {
             this.chart.judgeLineList.forEach(line => {
                 line.notesAbove.forEach(n => {
                     if(n.isDummy()) return;
                     if(n.cleared) combo++;
-                    count++;
+                    if (line.getRealTime(n.time) <= maxValidTime) count++;
                 });
                 line.notesBelow.forEach(n => {
                     if(n.isDummy()) return;
                     if(n.cleared) combo++;
-                    count++;
+                    if (line.getRealTime(n.time) <= maxValidTime) count++;
                 });
             });
         }
 
         var scoreStr = "";
         var maxScore = 1000000;
-        score = count == 0 ? 0 : Math.round(maxScore * (combo / count));
+        score = count == 0 ? 0 : Math.round(maxScore * (Math.min(combo, count) / count));
         for(var i=0; i <= Math.log10(maxScore) - 2 - Math.floor(score == 0 ? 0 : Math.log10(score)) + 1; i++) {
             scoreStr += "0";
         }
