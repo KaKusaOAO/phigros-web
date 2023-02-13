@@ -260,8 +260,10 @@ class Note {
 
     spawnJudge(game) {
         if(!game.enableParticles) return;
-        var linePos = this.parent.getScaledPosition(game, this.parent.getLinePosition(game.time));
-        var rad = -this.parent.getLineRotation(game.time) / 180 * Math.PI;
+
+        var time = this.parent.getRealTime(this.time);
+        var linePos = this.parent.getScaledPosition(game, this.parent.getLinePosition(time));
+        var rad = -this.parent.getLineRotation(time) / 180 * Math.PI;
         var xPos = this.getXPos(game);
 
         var px = Math.cos(rad) * xPos + linePos.x;
