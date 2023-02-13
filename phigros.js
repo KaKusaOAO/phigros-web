@@ -278,6 +278,11 @@ class Note {
     }
 
     isOffScreen(game) {
+        if (this instanceof HoldNote) {
+            var endTime = this.time + this.holdTime;
+            var gt = this.parent.getConvertedGameTime(game.time);
+            if (gt > this.time && gt <= endTime) return false;
+        }
         return Math.abs(this.floorPosition - this.parent.getCurrentFloorPosition()) > 10;
     }
 
