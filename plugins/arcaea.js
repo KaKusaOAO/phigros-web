@@ -129,9 +129,15 @@ class ArcaeaChart {
     }
 
     static async load(basePath, diff, arcDensity = 1, speedMultiplier = 1) {
-        var chart = ArcaeaChart.deserialize(await (await fetch(`${basePath}/${diff}.aff`)).text());
+        var chart = ArcaeaChart.deserialize(await (await fetch(`${basePath}/${diff}.aff`, { cache: "no-cache" })).text());
         game.chart = Chart.fromArcaea(chart, arcDensity, speedMultiplier);
         await game.loadAudio(`${basePath}/base.ogg`);
+    }
+
+    static async loadFromDLC(name, diff, arcDensity = 1, speedMultiplier = 1) {
+        var chart = ArcaeaChart.deserialize(await (await fetch(`/arcaea/assets/charts/dl/${name}_${diff}`, { cache: "no-cache" })).text());
+        game.chart = Chart.fromArcaea(chart, arcDensity, speedMultiplier);
+        await game.loadAudio(`/arcaea/assets/charts/dl/${name}`);
     }
 
     /**
@@ -164,7 +170,7 @@ class ArcaeaChart {
             if(state == 1) {
                 line = line.trim();
                 if(line.startsWith("timinggroup(")) {
-                    var group = new ArcaeaTimingGroup(false, line.substring("timinggroup(".length, line.length - 2));
+                    var group = new ArcaeaTimingGroup(false, line.substring("timinggroup(".length, line.indexOf(")")));
                     chart.timingGroups.push(group);
                     targetGroup = group;
                     console.group("TimingGroup:", group);

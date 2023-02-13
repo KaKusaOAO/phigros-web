@@ -1355,6 +1355,8 @@ class GameBase {
         this.offScreenForceRender = false;
         this.enableDummyNotes = true;
 
+        this.useAnimationFrame = false;
+
         // Events
         this.canvas.addEventListener("touchstart", e => {
             e.preventDefault();
@@ -1595,9 +1597,15 @@ class GameBase {
 
     // Update
     update() {
-        window.requestAnimationFrame(() => {
-            this.update();
-        });
+        if (this.useAnimationFrame) {
+            window.requestAnimationFrame(() => {
+                this.update();
+            });
+        } else {
+            setTimeout(() => {
+                this.update();
+            }, 0);
+        }
 
         var p = performance.now();
         this.deltaTime = p - this.lastRenderTime;

@@ -10,7 +10,3 @@
         * Spasmodic `AT Lv.16`
         * Rrhar'il `AT Lv.16`
         * Sigma (Haocore Mix) ~ Regrets of The Yellow Tulip ~ `SP Lv.?`
-
-## Todo
-
-- [ ] `floorPosition` support

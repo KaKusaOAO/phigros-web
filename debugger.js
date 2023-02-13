@@ -63,6 +63,7 @@
     audio.add(Helper, "resetAudioOffset");
 
     var appearance = gui.addFolder("外觀設定");
+    appearance.add(currentGame, "useAnimationFrame").listen();
     appearance.add(currentGame, "backgroundBlur").min(0).max(20).listen();
     appearance.add(currentGame, "backgroundDim").min(0).max(1).listen();
     appearance.add(currentGame, "maxFps").min(1).max(300).listen();

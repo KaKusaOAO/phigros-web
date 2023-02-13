@@ -1,5 +1,15 @@
 [
     {
+        "name": "Stasis",
+        "difficulty": {
+            "type": 3,
+            "level": 16
+        },
+        "audio": "./assets/charts/stasis/audio.wav",
+        "chart": "./assets/charts/stasis/3.json",
+        "bg": "./assets/charts/stasis/bg.png"
+    },
+    {
         "name": "Sigma (Haocore Mix) ~ Regrets of The Yellow Tulip ~",
         "difficulty": {
             "type": 4,
@@ -18,6 +28,16 @@
         "audio": "./assets/charts/rrhar/base.wav",
         "chart": "./assets/charts/rrhar/3.json",
         "bg": "./assets/charts/rrhar/bg.png"
+    },
+    {
+        "name": "ジングルベル(Jingle Bell)",
+        "difficulty": {
+            "type": 0,
+            "level": 4
+        },
+        "audio": "./assets/charts/jgbell/base.wav",
+        "chart": "./assets/charts/jgbell/0.json",
+        "bg": "./assets/charts/jgbell/bg.png"
     },
     {
         "name": "Spasmodic",
@@ -41,16 +61,6 @@
         "legacy": true
     },
     {
-        "name": "Dead Soul",
-        "difficulty": {
-            "type": 2,
-            "level": 13
-        },
-        "audio": "./assets/charts/ds/base.wav",
-        "chart": "./assets/charts/ds/2.json",
-        "bg": "./assets/charts/ds/bg.png"
-    },
-    {
         "name": "Igallta",
         "difficulty": {
             "type": 3,
@@ -66,9 +76,9 @@
             "type": 2,
             "level": 15
         },
-        "audio": "./assets/charts/2/base.wav",
-        "chart": "./assets/charts/2/3.json",
-        "bg": "./assets/charts/3/bg.png"
+        "audio": "./assets/charts/ps/base.wav",
+        "chart": "./assets/charts/ps/2.json",
+        "bg": "./assets/charts/ps/bg.png"
     },
     {
         "name": "MARENOL",
@@ -81,44 +91,14 @@
         "bg": "./assets/charts/m/bg.png"
     },
     {
-        "name": "The Mountain Eater",
-        "difficulty": {
-            "type": 2,
-            "level": 13
-        },
-        "audio": "./assets/charts/tme/base.wav",
-        "chart": "./assets/charts/tme/2.json",
-        "bg": "./assets/charts/tme/bg.png"
-    },
-    {
-        "name": "GOODFORTUNE",
+        "name": "Chronomia",
         "difficulty": {
             "type": 2,
             "level": 15
         },
-        "audio": "./assets/charts/gf/base.wav",
-        "chart": "./assets/charts/gf/2.json",
-        "bg": "./assets/charts/gf/bg.png"
-    },
-    {
-        "name": "BPM=RT",
-        "difficulty": {
-            "type": 2,
-            "level": 16
-        },
-        "audio": "./assets/charts/bpmrt/base.wav",
-        "chart": "./assets/charts/bpmrt/2.json",
-        "bg": "./assets/charts/m/bg.png"
-    },
-    {
-        "name": "阿咔鬼畜",
-        "difficulty": {
-            "type": 2,
-            "level": 13
-        },
-        "audio": "./assets/charts/ak/base.wav",
-        "chart": "./assets/charts/ak/2.json",
-        "bg": "./assets/charts/ak/bg.png"
+        "audio": "./assets/charts/chronomia/base.wav",
+        "chart": "./assets/charts/chronomia/2.json",
+        "bg": "./assets/charts/chronomia/bg.png"
     },
     {
         "name": "Aleph-0",
@@ -131,16 +111,6 @@
         "bg": "./assets/charts/a0/bg.png"
     },
     {
-        "name": "ヒバナ -Reloaded-",
-        "difficulty": {
-            "type": 3,
-            "level": 16
-        },
-        "audio": "./assets/charts/hbn/base.wav",
-        "chart": "./assets/charts/hbn/2.json",
-        "bg": "./assets/charts/a0/bg.png"
-    },
-    {
         "name": "Spasmodic",
         "difficulty": {
             "type": 3,
@@ -149,101 +119,5 @@
         "audio": "./assets/charts/spm/base.wav",
         "chart": "./assets/charts/spm/3.json",
         "bg": "./assets/charts/spm/bg.png"
-    },
-    {
-        "name": "April Showers (Short ver.)",
-        "difficulty": {
-            "type": 1,
-            "level": 8
-        },
-        "audio": "./assets/charts/aps/base.wav",
-        "chart": "./assets/charts/aps/1.json",
-        "bg": "./assets/charts/aps/bg.jpg"
-    },
-    {
-        "name": "April Showers",
-        "difficulty": {
-            "type": 2,
-            "level": 12
-        },
-        "audio": "./assets/charts/aps2/base.wav",
-        "chart": "./assets/charts/aps/1.json",
-        "bg": "./assets/charts/aps2/bg.jpg"
-    },
-    {
-        "name": "world.execute(me);",
-        "source": "Arcaea",
-        "difficulty": {
-            "type": 2,
-            "level": 12
-        },
-        "audio": "./assets/charts/wem/base.wav",
-        "chart": "./assets/charts/wem/2.json",
-        "bg": "./assets/charts/wem/bg.jpg"
-    },
-    {
-        "name": "Tempestissimo",
-        "source": "Arcaea",
-        "difficulty": {
-            "type": 3,
-            "level": 18
-        },
-        "audio": "./assets/charts/tptsm/base.wav",
-        "chart": "./assets/charts/tptsm/3.json",
-        "bg": "./assets/charts/tptsm/bg.jpg"
-    },
-    {
-        "name": "#1f1e33",
-        "source": "Arcaea",
-        "difficulty": {
-            "type": 2,
-            "level": 16
-        },
-        "audio": "./assets/charts/ifi/base.wav",
-        "chart": "./assets/charts/ifi/2.json",
-        "bg": "./assets/charts/ifi/bg.jpg"
-    },
-    {
-        "name": "Wolves Standing Towards Enemies",
-        "source": "Lanota to Arcaea",
-        "difficulty": {
-            "type": 3,
-            "level": 16
-        },
-        "audio": "./assets/charts/wolves/base.wav",
-        "chart": "./assets/charts/ifi/2.json",
-        "bg": "./assets/charts/ifi/bg.jpg"
-    },
-    {
-        "name": "Sound Chimera",
-        "difficulty": {
-            "type": 2,
-            "level": 13
-        },
-        "audio": "./assets/charts/sc/base.wav",
-        "chart": "./assets/charts/sc/2.json",
-        "bg": "./assets/charts/sc/bg.jpg"
-    },
-    {
-        "name": "Grievous Lady",
-        "source": "Arcaea",
-        "difficulty": {
-            "type": 2,
-            "level": 16
-        },
-        "audio": "./assets/charts/gl/base.wav",
-        "chart": "./assets/charts/gl/2.json",
-        "bg": "./assets/charts/gl/bg.jpg"
-    },
-    {
-        "name": "Megalovania (Camellia Remix)",
-        "source": "Bestdori",
-        "difficulty": {
-            "type": 3,
-            "level": 16
-        },
-        "audio": "./assets/charts/mg/base.mp3",
-        "chart": "./assets/charts/mg/3.json",
-        "bg": "./assets/charts/gl/bg.jpg"
     }
 ]
