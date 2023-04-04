@@ -1771,9 +1771,15 @@ class GameBase {
     }
 
     render() {
-        window.requestAnimationFrame(() => {
-            this.render();
-        });
+        if (this.useAnimationFrame) {
+            window.requestAnimationFrame(() => {
+                this.render();
+            });
+        } else {
+            window.setTimeout(() => {
+                this.render();
+            }, 0);
+        }
 
         var p = performance.now();
         this.deltaTime = p - this.lastRenderTime;
