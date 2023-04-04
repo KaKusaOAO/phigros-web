@@ -20,3 +20,6 @@ charts/*
 
 !charts/apf2023
 !charts/apf2023/*
+
+!charts/demonkin
+!charts/demonkin/*

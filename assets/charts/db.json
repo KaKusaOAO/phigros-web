@@ -33,6 +33,16 @@
         "performance": "apf2023"
     },
     {
+        "name": "Demonkin",
+        "difficulty": {
+            "type": 2,
+            "level": 13
+        },
+        "audio": "./assets/charts/demonkin/base.ogg",
+        "chart": "./assets/charts/demonkin/2.json",
+        "bg": "./assets/charts/stasis/bg.png"
+    },
+    {
         "name": "Stasis",
         "difficulty": {
             "type": 3,

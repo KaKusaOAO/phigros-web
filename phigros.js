@@ -599,6 +599,21 @@ class HoldNote extends Note {
         // Temp workaround
         return false;
     }
+
+    update(game) {
+        super.update(game);
+
+        let gt = this.parent.getConvertedGameTime(game.time);
+        if(this.crossed && gt < this.time + this.holdTime) {
+            var now = performance.now();
+            if(now - this.lastJudge > 75) {
+                this.lastJudge = now;
+                this.spawnJudge(game);
+            }
+        } else {
+            this.lastJudge = 0;
+        }
+    }
     
     /**
      * 
@@ -628,16 +643,6 @@ class HoldNote extends Note {
             }
             ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH - headH);
             ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos - headH, w, headH);
-        }
-
-        if(this.crossed && gt < this.time + this.holdTime) {
-            var now = performance.now();
-            if(now - this.lastJudge > 75) {
-                this.lastJudge = now;
-                this.spawnJudge(game);
-            }
-        } else {
-            this.lastJudge = 0;
         }
     }
 }
@@ -1843,6 +1848,8 @@ class GameBase {
                 ctx.globalAlpha = 0.25;
                 ctx.textBaseline = "middle";
                 ctx.textAlign = "center";
+                var ratio = this.ratio * 1.25;
+                ctx.font = `${36 * ratio}px ` + Assets.preferredFont;
                 ctx.fillText("Invalid background!", ctx.canvas.width / 2, ctx.canvas.height / 2, ctx.canvas.width * 0.8);
 
                 ctx.globalAlpha = 1;
