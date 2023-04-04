@@ -2051,7 +2051,7 @@ class Phigros extends GameBase {
                         // If it is perfect then it displays ○(≧▽≦)○
                         // Since this player doesn't support other types of judge,
                         // we always use this emoji.
-                        combo = "○(≧▽≦)○";
+                        combo = "Ｏ(≧▽≦)Ｏ";
                     }
                 }
             }
