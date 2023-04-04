@@ -1675,6 +1675,8 @@ class GameBase {
     }
 
     async loadAudio(audioPath) {
+        this.isPlaying = false;
+        this.audioElem.pause();
         this.audioElem.src = audioPath;
 
         var ctx = this.audioContext;
