@@ -72,6 +72,32 @@ var NoteTypes = {
     flick: 4
 };
 
+/**
+ * 
+ * @param {ChartEvent[]} events 
+ * @param {number} time 
+ * @param {number | undefined} start 
+ * @param {number | undefined} end 
+ * @returns 
+ */
+let findEvent = (events, time, start, end) => {
+    start ??= 0;
+    end ??= events.length - 1;
+
+    // Base Condition
+    if (start > end) return null;
+
+    let mid = Math.floor((start + end)/2);
+    let e = events[mid];
+    if (time >= e.startTime && time <= e.endTime) return e;
+
+    if (e.startTime > time) {
+        return findEvent(events, time, start, mid - 1);
+    } else {
+        return findEvent(events, time, mid + 1, end);
+    }
+};
+
 class Judge {
     constructor() {
 
@@ -765,9 +791,10 @@ class JudgeLine {
         this.meter = [];
 
         this.currTime = -1;
-        this.cachedLinePos = {};
-        this.cachedLineRot = {};
-        this.cachedFloorPosition = {};
+        this.cachedLinePos = new Map();
+        this.cachedLineRot = new Map();
+        this.cachedLineAlpha = new Map();
+        this.cachedFloorPosition = new Map();
     }
 
     serialize(withDummy = true) {
@@ -868,6 +895,11 @@ class JudgeLine {
             return ev;
         });
 
+        // Sort the events so we can use binary search
+        line.judgeLineDisappearEvents.sort((a, b) => a.startTime - b.startTime);
+        line.judgeLineRotateEvents.sort((a, b) => a.startTime - b.startTime);
+        line.judgeLineMoveEvents.sort((a, b) => a.startTime - b.startTime);
+
         return line;
     }
 
@@ -922,9 +954,10 @@ class JudgeLine {
         var time = game.time;
 
         this.currTime = time;
-        this.cachedLinePos = {};
-        this.cachedLineRot = {};
-        this.cachedFloorPosition = {};
+        this.cachedLinePos.clear();
+        this.cachedLineRot.clear();
+        this.cachedLineAlpha.clear();
+        this.cachedFloorPosition.clear();
         var linePos = this.getScaledPosition(game, this.getLinePosition(time));
         var lineRot = -this.getLineRotation(time) / 180 * Math.PI;
 
@@ -1053,8 +1086,7 @@ class JudgeLine {
     }
 
     getCalculatedFloorPosition(time) {
-        var key = time + "";
-        if (this.cachedFloorPosition[key] != null) return this.cachedFloorPosition[key];
+        if (this.cachedFloorPosition.has(time)) return this.cachedFloorPosition.get(time);
         var event = this.speedEvents.find(e => {
             return time > e.startTime && time <= e.endTime;
         });
@@ -1062,7 +1094,7 @@ class JudgeLine {
         if(event == null) return 0;
         
         var result = event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value;
-        this.cachedFloorPosition[key] = result;
+        this.cachedFloorPosition.set(time, result);
         return result;
     }
 
@@ -1094,9 +1126,7 @@ class JudgeLine {
 
     getSpeed(_time) {
         var time = this.getConvertedGameTime(_time);
-        var event = this.speedEvents.find(e => {
-            return time > e.startTime && time <= e.endTime;
-        });
+        var event = findEvent(this.speedEvents, time);
         if(event == null) event = this.speedEvents[0];
         if(event == null) return 1;
         
@@ -1104,55 +1134,55 @@ class JudgeLine {
     }
 
     getLinePosition(_time) {
-        var key = _time + "";
-        if (this.cachedLinePos[key] != null) {
-            return this.cachedLinePos[key];
+        if (this.cachedLinePos.has(_time)) {
+            return this.cachedLinePos.get(_time);
         }
 
         var time = this.getConvertedGameTime(_time);
-        var event = this.judgeLineMoveEvents.find(e => {
-            return time > e.startTime && time <= e.endTime;
-        });
-        if(event == null) event = this.judgeLineMoveEvents[0];
-        if(event == null) return {
-            x: 0.5, y: 0.5
-        };
+        var event = findEvent(this.judgeLineMoveEvents, time);
+        if (event == null) event = this.judgeLineMoveEvents[0];
+        if (event == null) {
+            var r = {
+                x: 0.5, y: 0.5
+            };
+            this.cachedLinePos.set(_time, r);
+            return r;
+        }
 
         var progress = (time - event.startTime) / (event.endTime - event.startTime);
         var result = {
             x: K.Maths.lerp(event.start, event.end, progress),
             y: K.Maths.lerp(event.start2, event.end2, progress)
         };
-        this.cachedLinePos[key] = result;
+        this.cachedLinePos.set(_time, result);
         return result;
     }
 
     getLineRotation(_time) {
-        var key = _time + "";
-        if (this.cachedLineRot[key] != null) {
-            return this.cachedLineRot[key];
+        if (this.cachedLineRot.has(_time)) {
+            return this.cachedLineRot.get(_time);
         }
 
         var time = this.getConvertedGameTime(_time);
-        var event = this.judgeLineRotateEvents.find(e => {
-            return time > e.startTime && time <= e.endTime;
-        });
-        if(event == null) event = this.judgeLineRotateEvents[0];
-        if(event == null) return 0;
+        var event = findEvent(this.judgeLineRotateEvents, time);
+        if (event == null) event = this.judgeLineRotateEvents[0];
+        if (event == null) return 0;
 
         var progress = (time - event.startTime) / (event.endTime - event.startTime);
         var result = K.Maths.lerp(event.start, event.end, progress);
-        this.cachedLineRot[key] = result;
+        this.cachedLineRot.set(_time, result);
         return result;
     }
 
     getLineAlpha(_time) {
+        if (this.cachedLineAlpha.has(_time)) {
+            return this.cachedLineAlpha.get(_time);
+        }
+
         var time = this.getConvertedGameTime(_time);
-        var event = this.judgeLineDisappearEvents.find(e => {
-            return time > e.startTime && time <= e.endTime;
-        });
-        if(event == null) event = this.judgeLineDisappearEvents[0];
-        if(event == null) return 1;
+        var event = findEvent(this.judgeLineDisappearEvents, time);
+        if (event == null) event = this.judgeLineDisappearEvents[0];
+        if (event == null) return 1;
 
         // 0 duration disappear events?
         if (event.endTime == event.startTime) {
@@ -1160,7 +1190,9 @@ class JudgeLine {
         }
 
         var progress = (time - event.startTime) / (event.endTime - event.startTime);
-        return K.Maths.lerp(event.start, event.end, progress);
+        var result = K.Maths.lerp(event.start, event.end, progress);
+        this.cachedLineAlpha.set(_time, result);
+        return result;
     }
 }
 
