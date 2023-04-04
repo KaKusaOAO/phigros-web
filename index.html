@@ -116,7 +116,10 @@
             audioCompatMode: hasQuery("audioCompat")
         });
 
-        game.loadChartWithAudio("./assets/charts/sigma_apf/4.json", "./assets/charts/sigma_apf/base.wav");
+        game.loadChartWithAudio({ 
+            chartPath: "./assets/charts/sigma_apf/4.json", 
+            audioPath: "./assets/charts/sigma_apf/base.wav" 
+        });
         game.songName = "Sigma (Haocore Mix) ~ Regrets of The Yellow Tulip ~";
         game.diffName = "SP";
         game.diffLevel = -1;
@@ -193,7 +196,10 @@
             var audioInput = document.getElementById("input-audio");
             var chartInput = document.getElementById("input-chart");
 
-            game.loadChartWithAudio(URL.createObjectURL(chartInput.files.item(0)), URL.createObjectURL(audioInput.files.item(0)));
+            game.loadChartWithAudio({
+                chartPath: URL.createObjectURL(chartInput.files.item(0)), 
+                audioPath: URL.createObjectURL(audioInput.files.item(0))
+            });
         }
 
         function loadTables() {
@@ -250,7 +256,12 @@
                     var loadCell = create("td");
                     loadCell.innerHTML = `<button class="btn btn-link">載入</button>`;
                     loadCell.children[0].addEventListener("click", e => {
-                        game.loadChartWithAudio(item.chart, item.audio, item.lineTextures ?? []);
+                        game.loadChartWithAudio({
+                            chartPath: item.chart, 
+                            audioPath: item.audio, 
+                            lineTextures: item.lineTextures ?? [],
+                            performance: item.performance
+                        });
                         game.songName = item.name;
                         game.diffName = Constants.difficulties[item.difficulty.type] || "SP";
                         game.diffLevel = item.difficulty.level;

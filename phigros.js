@@ -290,6 +290,26 @@ class Note {
         return false;
     }
 
+    isMissed(game) {
+        var gt = this.parent.getConvertedGameTime(game.time);
+        return gt > this.getClearTime() && !this.cleared;
+    }
+
+    getAlpha(game) {
+        if (!this.isMissed(game)) return 1;
+
+        var gt = this.parent.getConvertedGameTime(game.time);
+        var clearTime = this.getClearTime();
+        if (gt < clearTime) return 1;
+
+        var alpha = 0.5;
+        var a0time = this.parent.getConvertedGameTime(this.parent.getRealTime(clearTime) + 250);
+        var progress = (gt - clearTime) / (a0time - clearTime);
+        progress = Math.min(1, Math.max(0, progress));
+        alpha *= 1 - progress;
+        return alpha;
+    }
+
     update(game) {
         var gt = this.parent.getConvertedGameTime(game.time);
 
@@ -350,8 +370,9 @@ class Note {
      * @param {GameBase} game
      */
     render(game) {
+        var ctx = game.context;
+        ctx.globalAlpha = this.getAlpha(game);
         if(game.renderDebug && !this.cleared && (!this.isOffScreen(game) || game.offScreenForceRender) && !this.isDummy()) {
-            var ctx = game.context;
             var yPos = -this.getYPos(game) * (this instanceof HoldNote ? 1 : (game.useUniqueSpeed ? 1 : this.speed)) + 40 * game.ratio;
             var xPos = this.getXPos(game);
 
@@ -573,6 +594,11 @@ class HoldNote extends Note {
         ct -= 250;
         return Math.max(this.time, this.parent.getConvertedGameTime(ct));
     }
+
+    isMissed() {
+        // Temp workaround
+        return false;
+    }
     
     /**
      * 
@@ -732,6 +758,11 @@ class JudgeLine {
 
         // Cache
         this.meter = [];
+
+        this.currTime = -1;
+        this.cachedLinePos = {};
+        this.cachedLineRot = {};
+        this.cachedFloorPosition = {};
     }
 
     serialize(withDummy = true) {
@@ -793,10 +824,15 @@ class JudgeLine {
         var posY = 0;
         line.speedEvents = raw.speedEvents.map(e => {
             var ev = SpeedEvent.deserialize(e);
-            if (version == 3) return ev;
 
-            ev.floorPosition = posY;
-            posY += ev.value * (ev.endTime - ev.startTime) / line.bpm * 1.875;
+            if (ev.floorPosition == null) {
+                if (version >= 3) {
+                    console.warn("Found a speed event without a floorPosition value! Calculating floor position...")
+                }
+                
+                ev.floorPosition = posY;
+                posY += ev.value * (ev.endTime - ev.startTime) / line.bpm * 1.875;
+            }
             return ev;
         });
 
@@ -848,8 +884,8 @@ class JudgeLine {
     }
 
     getRotatedPosition(game, linePos, angle) {
-        linePos = linePos || this.getLinePosition(game.time);
-        angle = angle || this.getLineRotation(game.time);
+        linePos = linePos ?? this.getLinePosition(game.time);
+        angle = angle ?? this.getLineRotation(game.time);
 
         var rad = angle / 180 * Math.PI;
         var c = Math.cos(rad);
@@ -861,6 +897,11 @@ class JudgeLine {
             x: _x,
             y: _y
         };
+    }
+
+    update(game) {
+        this.notesAbove.forEach(n => n.update(game));
+        this.notesBelow.forEach(n => n.update(game));
     }
 
     /**
@@ -875,6 +916,10 @@ class JudgeLine {
         var t = ctx.getTransform();
         var time = game.time;
 
+        this.currTime = time;
+        this.cachedLinePos = {};
+        this.cachedLineRot = {};
+        this.cachedFloorPosition = {};
         var linePos = this.getScaledPosition(game, this.getLinePosition(time));
         var lineRot = -this.getLineRotation(time) / 180 * Math.PI;
 
@@ -885,11 +930,17 @@ class JudgeLine {
          * @param {Note} n 
          */
         let noteRenderFn = n => {
-            n.update(game);
             if(n.isOffScreen(game) && !game.offScreenForceRender) return;
 
             var f = this.getCurrentFloorPosition();
-            var doClip = f != f ? (this.getSpeed(game.time) < 0 ? n.doesClipOnPositiveSpeed() : true) : n.floorPosition < this.getCurrentFloorPosition();
+
+            var doClip = n instanceof HoldNote;
+            /*
+            var doClip = f != f ?
+                (this.getSpeed(game.time) < 0 ? n.doesClipOnPositiveSpeed() : true) :
+                n.floorPosition < this.getCurrentFloorPosition();
+            */
+
             if(game.renderDebug) {
                 n._renderTouchArea(game);
             }
@@ -901,6 +952,7 @@ class JudgeLine {
                 ctx.clip();
             }
             n.render(game);
+
             if(doClip) {
                 ctx.restore();
             }
@@ -915,6 +967,7 @@ class JudgeLine {
         this.notesBelow.filter(n => !(n instanceof HoldNote)).forEach(noteRenderFn);
 
         ctx.scale(1, -1);
+        ctx.globalAlpha = 1;
 
         var lt = ctx.getTransform();
         ctx.setTransform(t);
@@ -995,13 +1048,17 @@ class JudgeLine {
     }
 
     getCalculatedFloorPosition(time) {
+        var key = time + "";
+        if (this.cachedFloorPosition[key] != null) return this.cachedFloorPosition[key];
         var event = this.speedEvents.find(e => {
             return time > e.startTime && time <= e.endTime;
         });
         if(event == null) event = this.speedEvents[0];
         if(event == null) return 0;
         
-        return event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value;
+        var result = event.floorPosition + this.getRealTime(time - event.startTime) / 1000 * event.value;
+        this.cachedFloorPosition[key] = result;
+        return result;
     }
 
     recalculateSpeedEventsFloorPosition() {
@@ -1042,6 +1099,11 @@ class JudgeLine {
     }
 
     getLinePosition(_time) {
+        var key = _time + "";
+        if (this.cachedLinePos[key] != null) {
+            return this.cachedLinePos[key];
+        }
+
         var time = this.getConvertedGameTime(_time);
         var event = this.judgeLineMoveEvents.find(e => {
             return time > e.startTime && time <= e.endTime;
@@ -1052,13 +1114,20 @@ class JudgeLine {
         };
 
         var progress = (time - event.startTime) / (event.endTime - event.startTime);
-        return {
+        var result = {
             x: K.Maths.lerp(event.start, event.end, progress),
             y: K.Maths.lerp(event.start2, event.end2, progress)
         };
+        this.cachedLinePos[key] = result;
+        return result;
     }
 
     getLineRotation(_time) {
+        var key = _time + "";
+        if (this.cachedLineRot[key] != null) {
+            return this.cachedLineRot[key];
+        }
+
         var time = this.getConvertedGameTime(_time);
         var event = this.judgeLineRotateEvents.find(e => {
             return time > e.startTime && time <= e.endTime;
@@ -1067,7 +1136,9 @@ class JudgeLine {
         if(event == null) return 0;
 
         var progress = (time - event.startTime) / (event.endTime - event.startTime);
-        return K.Maths.lerp(event.start, event.end, progress);
+        var result = K.Maths.lerp(event.start, event.end, progress);
+        this.cachedLineRot[key] = result;
+        return result;
     }
 
     getLineAlpha(_time) {
@@ -1354,6 +1425,12 @@ class GameBase {
 
         this.useAnimationFrame = false;
 
+        /** @type {Uint8Array} */
+        this.lastAnalysedAudio = null;
+
+        /** @type {AnalyserNode} */
+        this.audioAnalyser = null;
+
         // Events
         this.canvas.addEventListener("touchstart", e => {
             e.preventDefault();
@@ -1427,11 +1504,20 @@ class GameBase {
         /** @type {AudioContext} */
         var clz = window.AudioContext || window.webkitAudioContext;
         if(clz) {
+            /** @type {AudioContext} */
             var audioContext = this.audioContext = new clz();
+            
             var gain = this.mainGainNode = audioContext.createGain();
             gain.gain.value = 1;
             gain.connect(audioContext.destination);
 
+            var analyser = this.audioAnalyser = audioContext.createAnalyser();
+            analyser.connect(gain);
+
+            // Using all the frequencies results in lower average volume, 
+            // so we will only use the lower frequencies.
+            var fb = Math.round(analyser.frequencyBinCount / 1024 * 64);
+            this.lastAnalysedAudio = new Uint8Array(fb);
             
             var fxGain = this.fxGainNode = audioContext.createGain();
             fxGain.gain.value = 0.35;
@@ -1447,6 +1533,7 @@ class GameBase {
 
         this.update();
         this.fixedUpdate();
+        this.render();
     }
 
     setResolutionScale(sc) {
@@ -1486,7 +1573,7 @@ class GameBase {
                 
                 var src = new AudioBufferSourceNode(ctx);
                 src.buffer = this.audioData;
-                src.connect(this.mainGainNode);
+                src.connect(this.audioAnalyser);
                 this.audioSource = src;
             }
         });
@@ -1538,11 +1625,12 @@ class GameBase {
         return 0;
     }
 
-    async loadChartWithAudio(chartPath, audioPath, lineTextures) {
+    async loadChartWithAudio({ chartPath, audioPath, lineTextures, performance }) {
         var chart = await (await fetch(chartPath, { cache: "no-cache" })).json();
         chart = Chart.deserialize(chart, true);
         this.chart = chart;
         this.handleLineTextures(lineTextures);
+        this.performance = performance ?? null;
         
         await this.loadAudio(audioPath);
     }
@@ -1571,7 +1659,8 @@ class GameBase {
         if(this.audioSource != null) {
             this.audioSource.disconnect();
         }
-        newSource.connect(this.mainGainNode);
+        
+        newSource.connect(this.audioAnalyser);
         this.audioSource = newSource;
     }
 
@@ -1593,17 +1682,57 @@ class GameBase {
         return this.ratio * mult;
     }
 
+    updateTime(isRender) {
+        var dt = isRender ? this.deltaTime : 1;
+
+        var offset = this.chart ? this.chart.offset * 1000 : 0;
+        offset += this.audioOffset;
+        var smooth = Math.max(0, Math.min(1, (dt / this.smooth)));
+        
+        if (!this.isPlaying) {
+            this.time = K.Maths.lerp(this.time, this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime, smooth);
+        } else {
+            this.time += dt * this.audioElem.playbackRate;
+            var actualTime = this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime;
+            if (Math.abs(this.time - actualTime) > 16) this.time = actualTime;
+        }
+    }
+
     // Update
     update() {
-        if (this.useAnimationFrame) {
-            window.requestAnimationFrame(() => {
-                this.update();
-            });
-        } else {
-            setTimeout(() => {
-                this.update();
-            }, 0);
+        setTimeout(() => this.update(), 0);
+
+        if(this.mainGainNode) {
+            this.mainGainNode.gain.value = this.audioElem.volume;
         }
+        this.updateTime(false);
+
+        if(!this.audioContext) {
+            this.isPlaying = true;
+        }
+
+        this.audioAnalyser.getByteFrequencyData(this.lastAnalysedAudio);
+
+        if (this.chart == null) return;
+        this.chart.judgeLineList.forEach(l => {
+            l.update(this);
+        });
+    }
+
+    fixedUpdate() {
+        window.setTimeout(() => {
+            this.fixedUpdate();
+        }, 5);
+
+        this.animatedObjects.forEach(obj => {
+            obj.fixedUpdate();
+        });
+    }
+
+    render() {
+        window.requestAnimationFrame(() => {
+            this.render();
+        });
 
         var p = performance.now();
         this.deltaTime = p - this.lastRenderTime;
@@ -1613,26 +1742,7 @@ class GameBase {
         }
 
         this.lastRenderTime = p;
-
-        if(this.mainGainNode) {
-            this.mainGainNode.gain.value = this.audioElem.volume;
-        }
-
-        var offset = this.chart ? this.chart.offset * 1000 : 0;
-        offset += this.audioOffset;
-        var smooth = Math.max(0, Math.min(1, (this.deltaTime / this.smooth)));
-        
-        if (!this.isPlaying) {
-            this.time = K.Maths.lerp(this.time, this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime, smooth);
-        } else {
-            this.time += this.deltaTime * this.audioElem.playbackRate;
-            var actualTime = this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime;
-            if (Math.abs(this.time - actualTime) > 16) this.time = actualTime;
-        }
-
-        if(!this.audioContext) {
-            this.isPlaying = true;
-        }
+        this.updateTime(true);
 
         (() => {
             let refAspect = this.refScreenWidth / this.refScreenHeight;
@@ -1671,16 +1781,6 @@ class GameBase {
         if(innerWidth < innerHeight) {
             this.canvas.classList.remove("fullscreen");
         }
-    }
-
-    fixedUpdate() {
-        window.setTimeout(() => {
-            this.fixedUpdate();
-        }, 5);
-
-        this.animatedObjects.forEach(obj => {
-            obj.fixedUpdate();
-        });
     }
 
     _renderBack() {
@@ -1813,6 +1913,11 @@ class Phigros extends GameBase {
 
         var maxValidTime = this.audioElem.duration * 1000;
 
+        var beat = 0;
+        if (this.chart != null) {
+            beat = this.chart.judgeLineList[0].getConvertedGameTime(this.time) / 32;
+        }
+
         if(this.chart != null) {
             this.chart.judgeLineList.forEach(line => {
                 line.notesAbove.forEach(n => {
@@ -1828,6 +1933,16 @@ class Phigros extends GameBase {
             });
         }
 
+        if (this.performance == "apf2023") {
+            if (beat < 336) {
+                count = 305;
+            } else if (beat < 340) {
+                var progress = (beat - 336) / 4;
+                progress = Math.pow(progress, 1);
+                count = K.Maths.lerp(305, count, progress);
+            }
+        }
+
         var scoreStr = "";
         var maxScore = 1000000;
         score = count == 0 ? 0 : Math.round(maxScore * (Math.min(combo, count) / count));
@@ -1837,24 +1952,44 @@ class Phigros extends GameBase {
         scoreStr += score;
 
         var pad = this.getRenderXPad();
-
         // -- Play bar
-        ctx.fillStyle = "#fff";
-        var offset = this.chart ? this.chart.offset * 1000 : 0;
-        offset += this.audioOffset;
-        
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(pad, 0, (this.time - offset) / this.audioElem.duration / 1000 * (this.canvas.width - pad * 2), 10 * this.ratio);
+        (() => {
+            ctx.fillStyle = "#fff";
+            var offset = this.chart ? this.chart.offset * 1000 : 0;
+            offset += this.audioOffset;
 
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(pad, 0, this.audioElem.currentTime / this.audioElem.duration * (this.canvas.width - pad * 2), 10 * this.ratio);
-        ctx.globalAlpha = 1;
+            var duration = this.audioElem.duration;
+            var curr = (this.time - offset) / 1000;
+            var audioCurr = this.audioElem.currentTime;
 
-        ctx.fillRect((this.time - offset) / this.audioElem.duration / 1000 * (this.canvas.width - pad * 2) + pad,
-                        0,
-                        2.5 * ratio + this.audioElem.currentTime / this.audioElem.duration * (this.canvas.width - pad * 2)
-                            - ((this.time - offset) / this.audioElem.duration / 1000 * (this.canvas.width - pad * 2)), 
-                        10 * this.ratio);
+            if (this.performance == "apf2023") {
+                if (beat < 336) {
+                    duration = 120;
+                } else {
+                    var arr = this.lastAnalysedAudio;
+                    
+                    var f = 0;
+                    arr.forEach(i => f += i);
+                    f /= arr.length;
+
+                    duration = 255;
+                    curr = audioCurr = f;
+                }
+            }
+
+            ctx.globalAlpha = 0.3;
+            ctx.fillRect(pad, 0, curr / duration * (this.canvas.width - pad * 2), 10 * this.ratio);
+
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(pad, 0, audioCurr / duration * (this.canvas.width - pad * 2), 10 * this.ratio);
+            ctx.globalAlpha = 1;
+
+            ctx.fillRect(curr / duration * (this.canvas.width - pad * 2) + pad,
+                0,
+                2.5 * ratio + audioCurr / duration * (this.canvas.width - pad * 2)
+                    - (curr / duration * (this.canvas.width - pad * 2)), 
+                10 * this.ratio);
+        })();
 
         // -- Pause button
         ctx.fillStyle = "#000";
@@ -1868,7 +2003,7 @@ class Phigros extends GameBase {
 
         // -- Song title
         ctx.fillStyle = "#fff";
-        ctx.fillRect(pad + 30 * ratio, ch - 62 * ratio, 7.5 * ratio, 35 * ratio);
+        // ctx.fillRect(pad + 30 * ratio, ch - 62 * ratio, 7.5 * ratio, 35 * ratio);
 
         ctx.textAlign = "left";
         ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
@@ -1877,12 +2012,20 @@ class Phigros extends GameBase {
         var sScale = metrics.width > (545 * ratio) ? (545 * ratio) / metrics.width : 1;
         ctx.font = `${28 * ratio * sScale}px ` + Assets.preferredFont;
         ctx.textBaseline = "middle";
-        ctx.fillText(this.songName, pad + 50 * ratio, ch - 45 * ratio);
+        ctx.fillText(this.songName, pad + 40 * ratio, ch - 45 * ratio);
 
         // -- Song difficulty & level
-        ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
-        ctx.textAlign = "right";
-        ctx.fillText(`${this.diffName} Lv.${this.diffLevel < 0 ? "?" : this.diffLevel}`, cw - pad - 40 * ratio, ch - 45 * ratio);
+        (() => {
+            ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
+            ctx.textAlign = "right";
+            
+            var text = `${this.diffName} Lv.${this.diffLevel < 0 ? "?" : this.diffLevel}`;
+            if (this.performance == "apf2023" && beat < 336) {
+                text = "lN Lv.I2";
+            }
+
+            ctx.fillText(text, cw - pad - 40 * ratio, ch - 45 * ratio);
+        })();
 
         // -- Combo
         ctx.textBaseline = "alphabetic";
@@ -1891,7 +2034,36 @@ class Phigros extends GameBase {
             ctx.font = `500 ${22 * ratio}px ` + Assets.preferredFont;
             ctx.fillText("COMBO", cw / 2, 87 * ratio);
             ctx.font = `500 ${58 * ratio}px ` + Assets.preferredFont;
+
+            if (this.performance == "apf2023" && beat >= 650 && beat < 716) {
+                var e1 = "(⊙o⊙)";
+
+                if (beat < 652) {
+                    combo = e1;
+                } else {
+                    var b = (beat - 652) % 16;
+                    if (b < 2) {
+                        combo = e1;
+                    } else if (b < 14) {
+                        combo = "(⊙ω⊙)";
+                    } else {
+                        // This emoji actually varies depends on the judge of the note
+                        // If it is perfect then it displays ○(≧▽≦)○
+                        // Since this player doesn't support other types of judge,
+                        // we always use this emoji.
+                        combo = "○(≧▽≦)○";
+                    }
+                }
+            }
+            
             ctx.fillText(combo, cw / 2, 60 * ratio);
+        }
+
+        // -- Apf2023 debug
+        if (this.performance == "apf2023" && this.renderDebug) {
+            ctx.textAlign = "center";
+            ctx.font = `500 ${22 * ratio}px ` + Assets.preferredFont;
+            ctx.fillText(Math.floor(beat), cw / 2, 115 * ratio);
         }
 
         // -- Score

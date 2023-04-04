@@ -22,6 +22,17 @@
         ]
     },
     {
+        "name": "今年も「雪降り、メリクリ」目指して頑張ります！！",
+        "difficulty": {
+            "type": 4,
+            "level": -1
+        },
+        "audio": "./assets/charts/apf2023/base.ogg",
+        "chart": "./assets/charts/apf2023/2.json",
+        "bg": "./assets/charts/fracture_ray/bg.png",
+        "performance": "apf2023"
+    },
+    {
         "name": "Stasis",
         "difficulty": {
             "type": 3,
