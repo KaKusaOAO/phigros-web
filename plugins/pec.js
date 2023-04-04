@@ -274,7 +274,7 @@ function parse(pec, filename) {
 			data2.lines.push(cmd);
 		} else throw new Error('Unexpected Command: ' + command);
 	}
-	result.offset = data2.offset / 1e3 - 0.175; //v18x固定延迟
+	// result.offset = data2.offset / 1e3 - 0.175; //v18x固定延迟
 	//bpm变速
 	if (!data2.bpmList.length) throw new Error('Invalid pec file');
 	const bpmList = new BpmList(data2.bpmList[0].bpm); //qwq

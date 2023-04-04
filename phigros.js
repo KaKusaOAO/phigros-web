@@ -89,9 +89,9 @@ let findEvent = (events, time, start, end) => {
 
     let mid = Math.floor((start + end)/2);
     let e = events[mid];
-    if (time >= e.startTime && time <= e.endTime) return e;
+    if (time > e.startTime && time <= e.endTime) return e;
 
-    if (e.startTime > time) {
+    if (e.startTime >= time) {
         return findEvent(events, time, start, mid - 1);
     } else {
         return findEvent(events, time, mid + 1, end);
@@ -1042,8 +1042,13 @@ class JudgeLine {
             if(game.renderDebug) {
                 ctx.textAlign = "center";
                 ctx.font = `${28 * game.ratio}px ${Assets.preferredFont}`;
-                ctx.fillText(`[${this.index}] a=${this.notesAbove.length} b=${this.notesBelow.length} bpm=${this.bpm} t=${Math.floor(this.getConvertedGameTime(game.time) / 32)} f=${this.getCurrentFloorPosition()}`,
-                    0, -24 * ratio);
+
+                if (this.notesAbove.length + this.notesBelow.length > 0) {
+                    ctx.fillText(`[${this.index}] bpm=${this.bpm} t=${Math.floor(this.getConvertedGameTime(game.time) / 32)} f=${this.getCurrentFloorPosition()}`,
+                        0, -24 * ratio);
+                } else {
+                    ctx.fillText(`[${this.index}] bpm=${this.bpm}`, 0, -24 * ratio);
+                }
             }
 
             ctx.fillStyle = "#000";
@@ -1086,10 +1091,9 @@ class JudgeLine {
     }
 
     getCalculatedFloorPosition(time) {
-        if (this.cachedFloorPosition.has(time)) return this.cachedFloorPosition.get(time);
-        var event = this.speedEvents.find(e => {
-            return time > e.startTime && time <= e.endTime;
-        });
+        if (this.cachedFloorPosition.has(time))
+            return this.cachedFloorPosition.get(time);
+        var event = findEvent(this.speedEvents, time);
         if(event == null) event = this.speedEvents[0];
         if(event == null) return 0;
         
@@ -1109,9 +1113,7 @@ class JudgeLine {
     recalculateNotesFloorPosition() {
         this.notesAbove.forEach(n => {
             var time = n.time;
-            var event = this.speedEvents.find(e => {
-                return time > e.startTime && time <= e.endTime;
-            });
+            var event = findEvent(this.speedEvents, time);
             if(event == null) event = this.speedEvents[0];
             if(event == null) return 0;
             
@@ -1827,24 +1829,9 @@ class GameBase {
         if(this.background && this.background instanceof Image) {
             try {
                 var pad = this.getRenderXPad();
-
-                // Background of padding
-                ctx.globalAlpha = 0.4;
-                ctx.drawImage(this.background, 0, 0, ctx.canvas.width, ctx.canvas.height);
-
-                // Background of play area
-                ctx.globalAlpha = 1;
-
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(pad, 0, ctx.canvas.width - pad * 2, ctx.canvas.height);
-                ctx.clip();
-
                 var iw = this.background.width;
                 var ih = this.background.height;
-                var xOffset = (ctx.canvas.width - pad * 2) - ctx.canvas.height / ih * iw;
 
-                // Render blurred background
                 var osc = this.blurOffscreenCanvas;
                 if (!osc) {
                     osc = this.blurOffscreenCanvas = document.createElement("canvas");
@@ -1854,13 +1841,45 @@ class GameBase {
                 osc.height = ctx.canvas.height;
 
                 var oCtx = this.blurOffscreenContext;
+                if (iw / ih > ctx.canvas.width / ctx.canvas.height) {
+                    var xOffset = (ctx.canvas.width - pad * 2) - ctx.canvas.height / ih * iw;
+                    var ox = pad + xOffset / 2 - ctx.canvas.width / 2;
+                    var oy = -ctx.canvas.height / 2;
+                    var ow = iw / ih * oCtx.canvas.height;
+                    var oh = oCtx.canvas.height;
+                } else {
+                    var xOffset = -pad * 2;
+                    var yOffset = ctx.canvas.height - ctx.canvas.width / iw * ih;
+                    var ox = pad + xOffset / 2 - ctx.canvas.width / 2;
+                    var oy = -ctx.canvas.height / 2 + yOffset / 2;
+                    var ow = oCtx.canvas.width;
+                    var oh = oCtx.canvas.width * ih / iw;
+                }
+
+                // Background of padding
+                ctx.globalAlpha = 0.4;
+                (() => {
+                    let t = ctx.getTransform();
+                    ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    ctx.drawImage(this.background, ox, oy, ow, oh);
+                    console.log(ox, oy, ow, oh);
+                    ctx.setTransform(t);
+                })();
+
+                // Background of play area
+                ctx.globalAlpha = 1;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(pad, 0, ctx.canvas.width - pad * 2, ctx.canvas.height);
+                ctx.clip();
+
+                // Render blurred background
                 var t = oCtx.getTransform();
                 oCtx.filter = `blur(${this.backgroundBlur * this.ratio}px)`;
                 oCtx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
-                oCtx.scale(1.125, 1.125);
-                oCtx.drawImage(this.background,
-                    pad + xOffset / 2 - ctx.canvas.width / 2, -ctx.canvas.height / 2,
-                    iw / ih * oCtx.canvas.height, oCtx.canvas.height);
+                oCtx.scale(1, 1);
+                oCtx.drawImage(this.background, ox, oy, ow, oh);
                 oCtx.setTransform(t);
                 ctx.drawImage(osc, 0, 0, ctx.canvas.width, ctx.canvas.height);
 
@@ -1872,6 +1891,7 @@ class GameBase {
                 // Reset alpha
                 ctx.globalAlpha = 1;
             } catch (ex) {
+                console.error(ex);
                 ctx.fillStyle = "#000";
                 ctx.globalAlpha = 1;
                 ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);

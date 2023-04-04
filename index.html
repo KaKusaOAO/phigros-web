@@ -256,23 +256,49 @@
                     var loadCell = create("td");
                     loadCell.innerHTML = `<button class="btn btn-link">載入</button>`;
                     loadCell.children[0].addEventListener("click", e => {
+                        let init = () => {
+                            game.songName = item.name;
+                            game.diffName = Constants.difficulties[item.difficulty.type] || "SP";
+                            game.diffLevel = item.difficulty.level;
+                            game.background = item.bg ? (() => {
+                                var im = new Image();
+                                im.src = item.bg;
+                                return im;
+                            })() : null;
+                            document.body.scrollTo({
+                                top: 0
+                            });
+                        };
+
+                        var type = item.type ?? "official";
+                        if (type == "pec") {
+                            fetch(item.chart, { cache: "no-cache"})
+                                .then(r => r.text())
+                                .then(r => {
+                                    var result = Chart.fromPec(r).data;
+                                    var blob = new Blob([result], {
+                                        type: "application/json"
+                                    });
+                                    var url = URL.createObjectURL(blob);
+
+                                    game.loadChartWithAudio({
+                                        chartPath: url,
+                                        audioPath: item.audio, 
+                                        lineTextures: item.lineTextures ?? [],
+                                        performance: item.performance
+                                    });
+                                    init();
+                                });
+                            return;
+                        }
+
                         game.loadChartWithAudio({
                             chartPath: item.chart, 
                             audioPath: item.audio, 
                             lineTextures: item.lineTextures ?? [],
                             performance: item.performance
                         });
-                        game.songName = item.name;
-                        game.diffName = Constants.difficulties[item.difficulty.type] || "SP";
-                        game.diffLevel = item.difficulty.level;
-                        game.background = item.bg ? (() => {
-                            var im = new Image();
-                            im.src = item.bg;
-                            return im;
-                        })() : null;
-                        document.body.scrollTo({
-                            top: 0
-                        });
+                        init();
                     });
 
                     row.appendChild(titleCell);
