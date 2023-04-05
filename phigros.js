@@ -1446,8 +1446,10 @@ class GameBase {
         this.songName = "Song name";
         this.diffName = "IN";
         this.diffLevel = 13;
-        this.deltaTime = 0;
+        this.deltaRenderTime = 0;
+        this.deltaUpdateTime = 0;
         this.lastRenderTime = performance.now();
+        this.lastUpdateTime = performance.now();
         this.maxFps = 300;
         this.maxRatio = 16 / 9;
 
@@ -1724,18 +1726,23 @@ class GameBase {
     }
 
     updateTime(isRender) {
-        var dt = isRender ? this.deltaTime : 1;
-
+        var dt = isRender ? this.deltaRenderTime : this.deltaUpdateTime;
         var offset = this.chart ? this.chart.offset * 1000 : 0;
         offset += this.audioOffset;
         var smooth = Math.max(0, Math.min(1, (dt / this.smooth)));
         
         if (!this.isPlaying) {
+            // Don't update time while not playing and not rendering
+            if (!isRender) return;
+
             this.time = K.Maths.lerp(this.time, this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime, smooth);
         } else {
+            // Don't update time while playing and rendering
+            if (isRender) return;
+
             this.time += dt * this.audioElem.playbackRate;
             var actualTime = this.audioContext ? this.audioElem.currentTime * 1000 + offset : p - this._startTime;
-            if (Math.abs(this.time - actualTime) > 16) this.time = actualTime;
+            if (Math.abs(this.time - actualTime) > 16 * this.audioElem.playbackRate) this.time = actualTime;
         }
     }
 
@@ -1746,6 +1753,10 @@ class GameBase {
         if(this.mainGainNode) {
             this.mainGainNode.gain.value = this.audioElem.volume;
         }
+
+        var p = performance.now();
+        this.deltaUpdateTime = p - this.lastUpdateTime;
+        this.lastUpdateTime = p;
         this.updateTime(false);
 
         if(!this.audioContext) {
@@ -1782,9 +1793,9 @@ class GameBase {
         }
 
         var p = performance.now();
-        this.deltaTime = p - this.lastRenderTime;
+        this.deltaRenderTime = p - this.lastRenderTime;
 
-        if(this.deltaTime < 1000 / this.maxFps) {
+        if(this.deltaRenderTime < 1000 / this.maxFps) {
             return;
         }
 
@@ -1870,7 +1881,6 @@ class GameBase {
                     let t = ctx.getTransform();
                     ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
                     ctx.drawImage(this.background, ox, oy, ow, oh);
-                    console.log(ox, oy, ow, oh);
                     ctx.setTransform(t);
                 })();
 
@@ -2142,7 +2152,7 @@ class Phigros extends GameBase {
         if(this.renderDebug) {
             ctx.textAlign = "center";
             ctx.font = `${28 * ratio}px ` + Assets.preferredFont;
-            ctx.fillText("FPS: " + Math.round(10000 / this.deltaTime) / 10, cw / 2, ch - 10 * ratio);
+            ctx.fillText("FPS: " + Math.round(10000 / this.deltaRenderTime) / 10, cw / 2, ch - 10 * ratio);
 
             let lw = ctx.lineWidth;
             let alpha = ctx.globalAlpha;
