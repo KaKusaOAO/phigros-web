@@ -14,6 +14,8 @@ const $_PhigrosJS = {
     source: "https://github.com/Kaka/phigros-web"
 };
 
+let _exported = null;
+
 var Assets = {
     preferredFont: `Saira, Exo, "Noto Sans CJK TC", sans-serif`,
     loadImageAsset(name, source) {
@@ -129,7 +131,7 @@ class JudgeEffect extends AnimatedObject {
 
         for(var i=0; i<amount; i++) {
             var r = Math.random() * Math.PI * 2;
-            var force = (Math.random() * 7 + 7);
+            var force = (Math.random() * 1 + 1) * 11;
             this.particles.push({
                 spawnTime: this.startTime,
                 position: [0, 0],
@@ -309,7 +311,12 @@ class Note {
             var gt = this.parent.getConvertedGameTime(game.time);
             if (gt > this.time && gt <= endTime) return false;
         }
-        return Math.abs(this.floorPosition - this.parent.getCurrentFloorPosition()) > 10;
+        return Math.abs(this.floorPosition - this.parent.getCurrentFloorPosition()) > 5;
+    }
+
+    isNegativeFloor() {
+        if (this instanceof HoldNote) return false;
+        return this.parent.getCurrentFloorPosition() > this.floorPosition + 1;
     }
 
     isDummy() {
@@ -322,7 +329,7 @@ class Note {
     }
 
     getAlpha(game) {
-        if (!this.isMissed(game)) return 1;
+        if (!this.isMissed(game)) return this.isNegativeFloor() ? 0 : 1;
 
         var gt = this.parent.getConvertedGameTime(game.time);
         var clearTime = this.getClearTime();
@@ -549,11 +556,12 @@ class TapNote extends Note {
         var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
+        var texture = this.hasSibling ? Assets.tapHL : Assets.tap;
         var w = this.noteWidth * ratio;
-        var h = (this.hasSibling ? 32 : 18) * ratio;
+        var h = texture.height / texture.width * w;
 
         if(!this.cleared) {
-            ctx.drawImage(this.hasSibling ? Assets.tapHL : Assets.tap, -w / 2 + xPos, -h / 2 - yPos, w, h);
+            ctx.drawImage(texture, -w / 2 + xPos, -h / 2 - yPos, w, h);
         }
     }
 }
@@ -586,11 +594,12 @@ class FlickNote extends Note {
         var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
+        var texture = this.hasSibling ? Assets.flickHL : Assets.flick;
         var w = this.noteWidth * ratio;
-        var h = (this.hasSibling ? 55 : 35) * ratio;
+        var h = texture.height / texture.width * w;
 
         if(!this.cleared) {
-            ctx.drawImage(this.hasSibling ? Assets.flickHL : Assets.flick, -w / 2 + xPos, -h / 2 - yPos, w, h);
+            ctx.drawImage(texture, -w / 2 + xPos, -h / 2 - yPos, w, h);
         }
     }
 }
@@ -651,24 +660,32 @@ class HoldNote extends Note {
         
         var ctx = game.context;
         var ratio = game.getNoteRatio();
-        var yPos = this.getYPos(game);
+        
+        // We use rounding here to make sure the texture is pixel perfect.
+        // Otherwise the textures will overlap.
+        // There are still issues around the hold note textures... Tried our best.
+        var yPos = Math.round(this.getYPos(game));
         var xPos = this.getXPos(game);
 
-        var w = this.noteWidth * ratio;
-        var h = (this.parent.getYPosWithGame(game, this.time + this.holdTime) - this.parent.getYPosWithGame(game, this.time));
+        var w = Math.round(this.noteWidth * ratio);
+        var h = Math.round(this.parent.getYPosWithGame(game, this.time + this.holdTime) - this.parent.getYPosWithGame(game, this.time));
 
         let gt = this.parent.getConvertedGameTime(game.time);
         if (gt <= this.time + this.holdTime) {
-            var headH = Assets.holdHead.height / Assets.holdHead.width * w;
-            var endH = Assets.holdEnd.height / Assets.holdEnd.width * w;
-            ctx.drawImage(Assets.holdEnd, -w / 2 + xPos, -yPos - h, w, endH);
+            var headTexture = this.hasSibling ? Assets.holdHLHead : Assets.holdHead;
+            var headH = Math.round(headTexture.height / headTexture.width * w);
+            var endH = Math.round(Assets.holdEnd.height / Assets.holdEnd.width * w);
+            var tx = Math.round(-w / 2 + xPos);
+            ctx.drawImage(Assets.holdEnd, tx, -yPos - h, w, endH);
             
             if (this.hasSibling) {
                 w *= 1060 / 989 * 1.025;
-                endH -= ratio * 1060 / 989;
+                w = Math.round(w);
+                endH -= Math.round(ratio * 1060 / 989);
+                tx = Math.round(-w / 2 + xPos);
             }
-            ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, -w / 2 + xPos, -yPos - h + endH, w, h - endH - headH);
-            ctx.drawImage(this.hasSibling ? Assets.holdHLHead : Assets.holdHead, -w / 2 + xPos, -yPos - headH, w, headH);
+            ctx.drawImage(this.hasSibling ? Assets.holdHL : Assets.hold, tx, Math.round(-yPos - h + endH + 0.501), w, Math.round(h - endH - headH - 0.501));
+            ctx.drawImage(headTexture, tx, -yPos - headH, w, headH);
         }
     }
 }
@@ -701,11 +718,12 @@ class CatchNote extends Note {
         var yPos = this.getYPos(game) * (game.useUniqueSpeed ? 1 : this.speed);
         var xPos = this.getXPos(game);
 
+        var texture = this.hasSibling ? Assets.catchHL : Assets.catch;
         var w = this.noteWidth * ratio * (this.hasSibling ? 1.08 : 1);
-        var h = (this.hasSibling ? 28 : 12) * ratio;
+        var h = texture.height / texture.width * w;
 
         if(!this.cleared) {
-            ctx.drawImage(this.hasSibling ? Assets.catchHL : Assets.catch, -w / 2 + xPos, -h / 2 - yPos, w, h);
+            ctx.drawImage(texture, -w / 2 + xPos, -h / 2 - yPos, w, h);
         }
     }
 }
@@ -1970,6 +1988,28 @@ class GameBase {
             }
         });
     }
+
+    export() {
+        if (!!_exported) {
+            URL.revokeObjectURL(_exported);
+        }
+
+        var text = JSON.stringify(this.chart.serialize());
+        var data = new Blob([text], { type: "application/json" });
+        _exported = URL.createObjectURL(data);
+
+        var link = document.createElement('a');
+        link.setAttribute('download', 'chart.json');
+        link.href = _exported;
+        document.body.appendChild(link);
+
+        // wait for the link to be added to the document
+        window.requestAnimationFrame(function () {
+            var event = new MouseEvent('click');
+            link.dispatchEvent(event);
+            document.body.removeChild(link);
+        });
+    }
 }
 
 class Phigros extends GameBase {
@@ -2013,9 +2053,9 @@ class Phigros extends GameBase {
         if (this.performance == "apf2023") {
             if (beat < 336) {
                 count = 305;
-            } else if (beat < 340) {
-                var progress = (beat - 336) / 4;
-                progress = Math.pow(progress, 1);
+            } else if (beat < 338) {
+                var progress = Math.max(0, Math.min(1, (beat - 336) / 2));
+                progress = Math.pow(progress, 1 / 3);
                 count = K.Maths.lerp(305, count, progress);
             }
         }

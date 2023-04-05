@@ -162,6 +162,7 @@
         },
         "audio": "./assets/charts/a0/base.wav",
         "chart": "./assets/charts/a0/2.json",
-        "bg": "./assets/charts/a0/bg.png"
+        "bg": "./assets/charts/a0/bg.png",
+        "legacy": true
     }
 ]
