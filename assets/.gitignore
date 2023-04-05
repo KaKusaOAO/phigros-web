@@ -23,3 +23,6 @@ charts/*
 
 !charts/demonkin
 !charts/demonkin/*
+
+!charts/ether_strike
+!charts/ether_strike/*
